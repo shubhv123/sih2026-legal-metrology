@@ -1,0 +1,70 @@
+{
+  "version": "LMPC-2011-v1.0",
+  "effective_date": "2011-01-01",
+  "source": "Legal Metrology (Packaged Commodities) Rules, 2011, Rule 6",
+  "mandatory_fields": [
+    {
+      "field_name": "manufacturer_name",
+      "display_name": "Manufacturer/Packer/Importer Name & Address",
+      "rule_id": "RULE_6_MANUFACTURER_PRESENT",
+      "required": true
+    },
+    {
+      "field_name": "net_quantity",
+      "display_name": "Net Quantity",
+      "rule_id": "RULE_6_NET_QTY_PRESENT",
+      "required": true
+    },
+    {
+      "field_name": "mrp",
+      "display_name": "Maximum Retail Price (MRP)",
+      "rule_id": "RULE_6_MRP_PRESENT",
+      "required": true
+    },
+    {
+      "field_name": "mfg_date",
+      "display_name": "Month & Year of Manufacture/Packing/Import",
+      "rule_id": "RULE_6_MFG_DATE_PRESENT",
+      "required": true
+    },
+    {
+      "field_name": "consumer_care",
+      "display_name": "Consumer Care Details",
+      "rule_id": "RULE_6_CONSUMER_CARE_PRESENT",
+      "required": true
+    },
+    {
+      "field_name": "country_of_origin",
+      "display_name": "Country of Origin",
+      "rule_id": "RULE_6_COUNTRY_OF_ORIGIN",
+      "required": false,
+      "condition": "imported_product_only"
+    }
+  ],
+  "font_height_thresholds_mm": {
+    "_comment": "Rule 7 Table-I - PARUL: fill in exact values from verified Rules PDF, these are placeholders",
+    "pdp_area_le_50_cm2": 1.0,
+    "pdp_area_50_to_100_cm2": 1.5,
+    "pdp_area_100_to_500_cm2": 2.5,
+    "pdp_area_500_to_2500_cm2": 4.0,
+    "pdp_area_gt_2500_cm2": 6.0
+  },
+  "category_exceptions": {
+    "_comment": "Capped at 3 categories per plan - do not expand further",
+    "medical_device": {
+      "source": "Legal Metrology (Packaged Commodities) Amendment Rules, 2025",
+      "effective_date": "2025-10-23",
+      "exempt_from": "all LMPC Rule 6/7 declarations - governed by Medical Devices Rules, 2017 instead"
+    },
+    "bulk_exempt": {
+      "source": "Rule 3",
+      "condition": "package exceeds 25kg or 25L (except cement/fertilizer up to 50kg)",
+      "exempt_from": "retail declaration rules"
+    },
+    "food_expiry": {
+      "source": "Rule 6 + FSSAI coordination",
+      "condition": "food/perishable item",
+      "additional_required_field": "best_before_or_expiry_date"
+    }
+  }
+}

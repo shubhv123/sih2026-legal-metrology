@@ -1,0 +1,35 @@
+# Python (backend)
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+compliance.db
+*.egg-info/
+
+# Node (frontend)
+node_modules/
+dist/
+.vite/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Runtime-generated data - don't commit scan images/evidence, keep the folders via .gitkeep
+backend/app/data/static/evidence/*
+backend/app/data/static/originals/*
+!backend/app/data/static/evidence/.gitkeep
+!backend/app/data/static/originals/.gitkeep
+
+# Dataset + trained model weights - too large/binary for git, share via Drive/Roboflow instead
+ml/dataset/*
+!ml/dataset/.gitkeep
+ml/weights/*.pt
+!ml/weights/.gitkeep
+backend/app/data/models/*.pt
+!backend/app/data/models/.gitkeep

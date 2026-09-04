@@ -26,8 +26,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from pathlib import Path
+
+STATIC_DIR = Path(__file__).parent / "data" / "static"
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+(STATIC_DIR / "evidence").mkdir(parents=True, exist_ok=True)
+(STATIC_DIR / "originals").mkdir(parents=True, exist_ok=True)
+
 # Serves evidence/original images referenced in ScanResult URLs
-app.mount("/static", StaticFiles(directory="app/data/static"), name="static")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.include_router(scan.router)
 app.include_router(history.router)

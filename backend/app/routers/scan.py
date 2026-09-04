@@ -16,7 +16,7 @@ TODO(shubh):
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, UploadFile, File, Form
 from typing import Optional
 
@@ -45,7 +45,7 @@ async def scan_label(
     return ScanResult(
         scan_id=scan_id,
         product_name_hint="Sample Product",
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         detection=Detection(
             method=DetectionMethod.OPENCV_FALLBACK,
             confidence=0.91,

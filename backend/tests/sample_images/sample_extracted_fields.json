@@ -1,0 +1,62 @@
+[
+  {
+    "field_name": "net_quantity",
+    "raw_ocr_text": "Net Weight: 500 g",
+    "normalized_value": "500 g",
+    "confidence": 0.786,
+    "bbox": {
+      "x_min": 27,
+      "y_min": 86,
+      "x_max": 235,
+      "y_max": 124
+    }
+  },
+  {
+    "field_name": "mrp",
+    "raw_ocr_text": "MRP Rs. 149.00 (Incl all taxes)",
+    "normalized_value": "149.00",
+    "confidence": 0.899,
+    "bbox": {
+      "x_min": 30,
+      "y_min": 140,
+      "x_max": 387,
+      "y_max": 168
+    }
+  },
+  {
+    "field_name": "mfg_date",
+    "raw_ocr_text": "Mfg Date: 08/2026",
+    "normalized_value": "08/2026",
+    "confidence": 0.768,
+    "bbox": {
+      "x_min": 27,
+      "y_min": 187,
+      "x_max": 253,
+      "y_max": 223
+    }
+  },
+  {
+    "field_name": "manufacturer_name",
+    "raw_ocr_text": "Mfd By: CreenRoots Agro Ltd; Mumbai 400001",
+    "normalized_value": "GreenRoots Agro Ltd, Mumbai 400001",
+    "confidence": 0.518,
+    "bbox": {
+      "x_min": 28,
+      "y_min": 242,
+      "x_max": 440,
+      "y_max": 268
+    }
+  },
+  {
+    "field_name": "consumer_care",
+    "raw_ocr_text": "Consumer Care: 1800-200- 3OO0, helpogreenroota.in",
+    "normalized_value": "1800-200-3000, help@greenroots.in",
+    "confidence": 0.362,
+    "bbox": {
+      "x_min": 26,
+      "y_min": 291,
+      "x_max": 510,
+      "y_max": 321
+    }
+  }
+]

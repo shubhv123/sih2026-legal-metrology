@@ -28,7 +28,7 @@ from app.schemas.scan import (
     ComplianceResult, FieldStatus,
 )
 
-RULES_PATH = Path(__file__).parent.parent / "data" / "rules" / "lmpc_rules_v1.json"
+RULES_PATH = Path(__file__).parent.parent.parent / "data" / "rules" / "lmpc_rules_v1.json"
 CONFIDENCE_REVIEW_THRESHOLD = 0.75
 
 

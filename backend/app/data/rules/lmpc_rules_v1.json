@@ -158,5 +158,224 @@
       "condition": "Food or perishable items",
       "additional_required_field": "best_before_or_expiry_date"
     }
+  },
+  "violation_templates": {
+    "fields": {
+      "mrp": {
+        "missing": {
+          "summary": "Maximum Retail Price (MRP) declaration absent",
+          "legal_reference": "Rule 6(1)(e) of LMPC Rules, 2011 read with Section 18/36 of Legal Metrology Act, 2009",
+          "explanation": "The package does not bear a legible Maximum Retail Price inclusive of all taxes, violating Rule 6(1)(e).",
+          "recommended_action": "Recommend physical verification; if absence of retail price is confirmed by officer, notice under Section 36(1) may apply."
+        },
+        "review_required": {
+          "summary": "MRP numerals detected with low visual confidence",
+          "legal_reference": "Rule 6(1)(e) of LMPC Rules, 2011",
+          "explanation": "Price digits or currency qualifiers are faint, smudged, or partially obscured (confidence: {confidence:.2f}).",
+          "recommended_action": "Physical inspection recommended to verify exact printed retail price before taking enforcement action."
+        },
+        "pass": {
+          "summary": "Maximum Retail Price declared with statutory tax qualifier",
+          "legal_reference": "Rule 6(1)(e) of LMPC Rules, 2011",
+          "explanation": "Maximum Retail Price detected ({normalized_value}) bearing mandatory 'inclusive of all taxes' stipulation and compliant currency format."
+        }
+      },
+      "net_quantity": {
+        "missing": {
+          "summary": "Net Quantity declaration absent",
+          "legal_reference": "Rule 6(1)(c) of LMPC Rules, 2011 read with Section 18/36 of Legal Metrology Act, 2009",
+          "explanation": "The net weight, measure, or numerical count is not declared on the package in standard SI metric units.",
+          "recommended_action": "Recommend physical package weight verification; if non-declaration is confirmed, advisory or notice under Section 36(1) may apply."
+        },
+        "review_required": {
+          "summary": "Net Quantity detected with low visual confidence",
+          "legal_reference": "Rule 6(1)(c) of LMPC Rules, 2011",
+          "explanation": "Net quantity numerals or unit symbols could not be recognized with high confidence (confidence: {confidence:.2f}).",
+          "recommended_action": "Officer manual verification recommended to confirm standard metric quantity on physical container."
+        },
+        "pass": {
+          "summary": "Net Quantity declared in standard SI metric units",
+          "legal_reference": "Rule 6(1)(c) of LMPC Rules, 2011",
+          "explanation": "Net quantity detected ({normalized_value}) declared using standard metric units of weight, volume, or numerical count conforming to Rule 6(1)(c) and Rule 13."
+        }
+      },
+      "mfg_date": {
+        "missing": {
+          "summary": "Month & Year of manufacture / packing absent",
+          "legal_reference": "Rule 6(1)(d) of LMPC Rules, 2011 read with Section 18/36 of Legal Metrology Act, 2009",
+          "explanation": "The package fails to state the month and year of manufacture, pre-packing, or import as required under Rule 6(1)(d).",
+          "recommended_action": "Recommend physical inspection of container stamps; if manufacturing/packing date is confirmed absent, notice under Section 36(1) may apply."
+        },
+        "review_required": {
+          "summary": "Manufacturing date stamp ambiguous or low confidence",
+          "legal_reference": "Rule 6(1)(d) of LMPC Rules, 2011",
+          "explanation": "Date stamp appears faint or dot-matrix dots are partially illegible (confidence: {confidence:.2f}).",
+          "recommended_action": "Recommend examining physical batch printing under adequate lighting to confirm legible month and year."
+        },
+        "pass": {
+          "summary": "Month and Year of manufacture / packing declared",
+          "legal_reference": "Rule 6(1)(d) of LMPC Rules, 2011",
+          "explanation": "Month and year of manufacture/packing detected ({normalized_value}) conforming to Rule 6(1)(d)."
+        }
+      },
+      "expiry_date": {
+        "missing": {
+          "summary": "Best before / Expiry date declaration absent on perishable article",
+          "legal_reference": "Rule 6(1)(d) proviso of LMPC Rules, 2011 read with relevant food safety standards",
+          "explanation": "Perishable or food package lacks a mandatory 'Best before' or 'Use by' date required under Rule 6(1)(d) proviso.",
+          "recommended_action": "Recommend physical container check; if commodity is perishable and date is confirmed absent, statutory notice under Section 36(1) may apply."
+        },
+        "review_required": {
+          "summary": "Expiry / Best before date stamp detected with low visual confidence",
+          "legal_reference": "Rule 6(1)(d) proviso of LMPC Rules, 2011",
+          "explanation": "Best before / expiry date digits or batch ink impressions appear faint or smudged (confidence: {confidence:.2f}).",
+          "recommended_action": "Recommend manual inspection under direct lighting to verify legibility of use-by date on container."
+        },
+        "pass": {
+          "summary": "Best before / Expiry date declared on perishable commodity",
+          "legal_reference": "Rule 6(1)(d) proviso of LMPC Rules, 2011",
+          "explanation": "Freshness / use-by date declaration identified ({normalized_value}) satisfying Rule 6(1)(d) proviso consumer safety disclosure."
+        }
+      },
+      "manufacturer_name": {
+        "missing": {
+          "summary": "Manufacturer / Packer / Importer details absent",
+          "legal_reference": "Rule 6(1)(a) & Rule 10 of LMPC Rules, 2011 read with Section 18/36 of Legal Metrology Act, 2009",
+          "explanation": "The package lacks the name and complete physical address of the manufacturer, packer, or importer required for origin traceability.",
+          "recommended_action": "Recommend officer inspect entire package for complete postal address; if manufacturer cannot be identified, inquiry under Section 36 may be initiated."
+        },
+        "review_required": {
+          "summary": "Manufacturer name/address partially recognized",
+          "legal_reference": "Rule 6(1)(a) of LMPC Rules, 2011",
+          "explanation": "Producer name or address text was detected with marginal OCR confidence (confidence: {confidence:.2f}).",
+          "recommended_action": "Recommend officer manual check to ensure complete postal address and PIN code are present on packaging."
+        },
+        "pass": {
+          "summary": "Manufacturer / Packer identity and complete address declared",
+          "legal_reference": "Rule 6(1)(a) of LMPC Rules, 2011",
+          "explanation": "Name and complete physical address details detected ({normalized_value}) providing full producer traceability under Rule 6(1)(a) and Rule 10."
+        }
+      },
+      "consumer_care": {
+        "missing": {
+          "summary": "Consumer Care contact details absent",
+          "legal_reference": "Rule 6(2) of LMPC Rules, 2011 read with Section 18/36 of Legal Metrology Act, 2009",
+          "explanation": "The package does not provide mandatory contact details (telephone, physical address, or email) for consumer grievance redressal.",
+          "recommended_action": "Recommend physical check for grievance contact details; if absent, notice under Rule 6(2) read with Section 36(1) may apply."
+        },
+        "review_required": {
+          "summary": "Consumer Care details detected with low visual confidence",
+          "legal_reference": "Rule 6(2) of LMPC Rules, 2011",
+          "explanation": "Contact details (helpline or email) were detected with low confidence (confidence: {confidence:.2f}).",
+          "recommended_action": "Recommend physical verification of package to ensure functional consumer helpline number or email address is clearly legible."
+        },
+        "pass": {
+          "summary": "Consumer Care grievance redressal contact declared",
+          "legal_reference": "Rule 6(2) of LMPC Rules, 2011",
+          "explanation": "Direct consumer grievance contact details detected ({normalized_value}) fulfilling mandatory redressal requirements under Rule 6(2)."
+        }
+      },
+      "unit_sale_price": {
+        "missing": {
+          "summary": "Unit Sale Price (USP) absent on package",
+          "legal_reference": "Rule 6(11) of LMPC Rules, 2011 (inserted by 2021/2022 Amendment)",
+          "explanation": "Package requires declaration of price per standard unit (e.g. Rs./g or Rs./ml) alongside MRP, but none was detected.",
+          "recommended_action": "Recommend verifying whether package qualifies for multi-pack or equal-price exemptions; if non-exempt, compliance advisory under Rule 6(11) may apply."
+        },
+        "review_required": {
+          "summary": "Unit Sale Price detected with low visual confidence",
+          "legal_reference": "Rule 6(11) of LMPC Rules, 2011",
+          "explanation": "Unit sale price digits or unit qualifier are ambiguous (confidence: {confidence:.2f}).",
+          "recommended_action": "Recommend physical inspection to verify that unit sale price corresponds correctly to declared retail price and net quantity."
+        },
+        "pass": {
+          "summary": "Unit Sale Price declared alongside retail price",
+          "legal_reference": "Rule 6(11) of LMPC Rules, 2011",
+          "explanation": "Unit sale price detected ({normalized_value}) per standard metric unit, satisfying price transparency requirements under Rule 6(11)."
+        }
+      },
+      "generic_name": {
+        "missing": {
+          "summary": "Common or Generic commodity name absent",
+          "legal_reference": "Rule 6(1)(b) of LMPC Rules, 2011",
+          "explanation": "The generic identity of the commodity is omitted from the package, impairing consumer awareness.",
+          "recommended_action": "Recommend verifying whether generic identity is declared elsewhere on package; if omitted, advisory under Rule 6(1)(b) may apply."
+        },
+        "review_required": {
+          "summary": "Generic commodity name unclear",
+          "legal_reference": "Rule 6(1)(b) of LMPC Rules, 2011",
+          "explanation": "Generic product identity detected with low confidence (confidence: {confidence:.2f}).",
+          "recommended_action": "Recommend physical verification to confirm generic commodity name is plainly visible to consumers."
+        },
+        "pass": {
+          "summary": "Common or Generic commodity name declared",
+          "legal_reference": "Rule 6(1)(b) of LMPC Rules, 2011",
+          "explanation": "Clear generic identity of the commodity declared as {normalized_value}, meeting consumer awareness requirements under Rule 6(1)(b)."
+        }
+      },
+      "country_of_origin": {
+        "missing": {
+          "summary": "Country of Origin declaration not detected",
+          "legal_reference": "Amended country-of-origin labeling requirements (under Rule 6(1)(a) proviso for imported packages; secondary legal source citation - pending primary Gazette confirmation)",
+          "explanation": "Package does not disclose country of manufacture or assembly (mandatory for imported commodities alongside importer details).",
+          "recommended_action": "Recommend verifying bill of entry or import documents; if package is imported and origin declaration is omitted, compliance clarification under origin rules may apply."
+        },
+        "review_required": {
+          "summary": "Country of Origin declaration detected with low confidence",
+          "legal_reference": "Amended country-of-origin labeling requirements",
+          "explanation": "Country of origin wording detected with low confidence (confidence: {confidence:.2f}); manual confirmation advised.",
+          "recommended_action": "Recommend inspecting package import labeling or documentation to verify declared country of manufacture."
+        },
+        "pass": {
+          "summary": "Country of Origin declared on package",
+          "legal_reference": "Amended country-of-origin labeling requirements",
+          "explanation": "Country of manufacture or assembly identified as {normalized_value} satisfying origin transparency requirements for imported packaging."
+        }
+      }
+    },
+    "font_height": {
+      "fail_below_threshold": {
+        "summary": "Numeral font height below statutory minimum threshold",
+        "legal_reference": "Rule 7 Table-I / Table-II read with Rule 32(2) of LMPC Rules, 2011",
+        "explanation": "Character height of '{field_name}' ({measured_height_mm:.1f} mm) is below statutory minimum ({required_height_mm:.1f} mm) prescribed under Rule 7.",
+        "recommended_action": "Recommend physical verification using digital calipers; if numeral height is confirmed below statutory threshold, penalty provisions under Rule 32(2) may apply."
+      },
+      "review_required_calibration": {
+        "summary": "Font height calibration confidence below review threshold",
+        "legal_reference": "Rule 7 of LMPC Rules, 2011",
+        "explanation": "Scale calibration could not be verified with high confidence (confidence: {confidence:.2f}); font height cannot be legally certified from image alone.",
+        "recommended_action": "Officer manual measurement recommended with calibrated digital calipers before making a legal determination."
+      },
+      "pass": {
+        "summary": "Numeral and letter font heights meet statutory minimum",
+        "legal_reference": "Rule 7 of LMPC Rules, 2011",
+        "explanation": "Measured font height for '{field_name}' ({measured_height_mm:.1f} mm) meets or exceeds statutory threshold ({required_height_mm:.1f} mm) prescribed under Rule 7."
+      }
+    },
+    "placement": {
+      "fail_outside_pdp": {
+        "summary": "Mandatory declaration located outside Principal Display Panel",
+        "legal_reference": "Rule 6 and Rule 8 of LMPC Rules, 2011",
+        "explanation": "Declaration '{field_name}' appears on a secondary face rather than consolidated on the designated Principal Display Panel.",
+        "recommended_action": "Recommend physical inspection of all package panels; if principal panel omits declarations, advisory under Rule 6 and Rule 8 may apply."
+      },
+      "pass": {
+        "summary": "Declaration properly positioned on Principal Display Panel",
+        "legal_reference": "Rule 6 and Rule 8 of LMPC Rules, 2011",
+        "explanation": "Declaration '{field_name}' is positioned within the Principal Display Panel (PDP) ensuring prominent legibility under Rule 6 and Rule 8."
+      }
+    },
+    "exceptions": {
+      "medical_device": {
+        "summary": "Exempt from LMPC declarations under 2025 Amendment",
+        "legal_reference": "Legal Metrology (Packaged Commodities) Amendment Rules, 2025",
+        "explanation": "Exempt from LMPC Rule 6 & 7 declarations; governed under Medical Devices Rules, 2017."
+      },
+      "bulk_exempt": {
+        "summary": "Exempt as bulk/wholesale or institutional package",
+        "legal_reference": "Rule 3 of LMPC Rules, 2011",
+        "explanation": "Exempt from retail declarations under Rule 3: package quantity exceeds 25 kg/L or is packaged exclusively for institutional/industrial consumers."
+      }
+    }
   }
 }

@@ -1,12 +1,8 @@
-"""Owned by: Aditya"""
+from datetime import datetime
 
-from pydantic import BaseModel
-from enum import Enum
+from pydantic import BaseModel, ConfigDict
 
-
-class UserRole(str, Enum):
-    INSPECTOR = "inspector"
-    ADMIN = "admin"
+from app.schemas.enums import RoleEnum
 
 
 class LoginRequest(BaseModel):
@@ -14,13 +10,19 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class LoginResponse(BaseModel):
+class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    role: UserRole
+    role: RoleEnum
     username: str
+    full_name: str | None = None
 
 
-class CurrentUser(BaseModel):
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
     username: str
-    role: UserRole
+    role: RoleEnum
+    full_name: str | None = None
+    created_at: datetime

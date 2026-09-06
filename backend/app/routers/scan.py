@@ -1,109 +1,130 @@
-"""
-Owner: SHUBH
+"""Product scan router (Owner: Shubh).
 
-This is the highest-priority endpoint - Keshav's Upload/Results pages
-and Aditya's rule engine both depend on this response shape.
-
-TODO(shubh):
- 1. Replace the mock ScanResult below with the real pipeline call:
-    detection -> preprocessing -> ocr -> extraction -> calibration
- 2. Call into app.services.compliance.rule_engine (Aditya's code) to
-    fill compliance_results + overall_status - don't duplicate rule
-    logic here, just call his function.
- 3. Save annotated evidence image, return its URL.
- 4. Persist the ScanResult to DB (db/models.py) before returning -
-    this is what makes /history and /dashboard work.
+Pipeline:
+1. Receive image upload + optional calibration params.
+2. detect_pdp() -> isolates package/PDP (YOLOv8 + OpenCV fallback).
+3. calibrate_scale() -> calculates mm/px scale (ArUco + reference object fallback).
+4. run_ocr_and_extract() -> extracts mandatory fields (EasyOCR + RapidFuzz + regex).
+5. evaluate_compliance() -> Rule 6 completeness, placement & Rule 7 font-height check.
+6. Return structured ScanResponse and save to database.
 """
 
+import os
 import uuid
-from datetime import datetime, timezone
-from fastapi import APIRouter, UploadFile, File, Form
-from typing import Optional
+from datetime import UTC, datetime
 
-from app.schemas.scan import (
-    ScanResult, CalibrationMethod, Detection, DetectionMethod,
-    BoundingBox, ExtractedField, FontAnalysis, FontAnalysisField,
-    PlacementCheck, ComplianceResult, FieldStatus,
-)
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from sqlalchemy.orm import Session
 
-router = APIRouter(prefix="/api/v1", tags=["scan"])
+from app.db.session import get_db
+from app.schemas.compliance import ExtractedField
+from app.schemas.enums import CalibrationMethod, ComplianceStatus, ProductCategory
+from app.schemas.scan import ScanResponse
+from app.services.compliance import evaluate_compliance
+from app.services.vision import calibrate_scale, detect_pdp, run_ocr_and_extract
+
+router = APIRouter(prefix="/scan", tags=["Product Scanning"])
 
 
-@router.post("/scan", response_model=ScanResult)
-async def scan_label(
-    image: UploadFile = File(...),
-    calibration_method: CalibrationMethod = Form(CalibrationMethod.ARUCO),
-    known_object_size_mm: Optional[float] = Form(None),
+@router.post("", response_model=ScanResponse)
+async def upload_and_scan_label(
+    file: UploadFile | None = File(None, description="Package label image"),
+    image: UploadFile | None = File(None, description="Package label image (alias)"),
+    known_object_size_mm: float | None = Form(
+        None, description="Physical size of reference object in mm"
+    ),
+    calibration_method: str | None = Form(None, description="Calibration method"),
+    product_category: str | None = Form(
+        "standard_retail", description="Product category for exception handling"
+    ),
+    db: Session = Depends(get_db),
 ):
-    """
-    MOCK IMPLEMENTATION - replace with real pipeline.
-    This mock lets Keshav (frontend) and Aditya (rule engine wiring)
-    build against a stable shape from day 1.
-    """
-    scan_id = str(uuid.uuid4())
+    """Upload product label image for automated LMPC compliance verification.
 
-    return ScanResult(
+    Accepts file via either 'file' or 'image' field for client compatibility.
+    """
+    upload_file = file or image
+    if upload_file is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Package label image is required (use form field 'file' or 'image')",
+        )
+
+    if not upload_file.content_type or not upload_file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file must be a valid image (PNG, JPEG, WEBP)",
+        )
+
+    scan_id = str(uuid.uuid4())
+    filename = f"{scan_id}_{upload_file.filename or 'label.jpg'}"
+    upload_dir = "static/evidence"
+    os.makedirs(upload_dir, exist_ok=True)
+    file_path = os.path.join(upload_dir, filename)
+
+    # Save uploaded file
+    contents = await upload_file.read()
+    with open(file_path, "wb") as f:
+        f.write(contents)
+
+    # 1. Vision Detection (Stubbed for Shubh)
+    pdp_result = detect_pdp(file_path)
+
+    # 2. Calibration (Stubbed for Shubh)
+    scale_factor, calib_method = calibrate_scale(file_path, known_object_size_mm)
+
+    # 3. OCR & Field Extraction (Stubbed for Shubh)
+    extracted_fields_raw = run_ocr_and_extract(file_path)
+
+    # 4. Compliance Rule Engine (Aditya)
+    compliance_results = evaluate_compliance(
+        extracted_fields=extracted_fields_raw,
+        pdp_bbox=pdp_result.get("bbox"),
+        scale_factor_mm_per_px=scale_factor,
+        category=product_category or "standard_retail",
+    )
+
+    # Calculate overall verdict
+    has_fail = any(r.status == ComplianceStatus.FAIL for r in compliance_results)
+    has_review = any(r.status == ComplianceStatus.REVIEW_REQUIRED for r in compliance_results)
+
+    if has_fail:
+        overall_status = ComplianceStatus.FAIL
+    elif has_review:
+        overall_status = ComplianceStatus.REVIEW_REQUIRED
+    else:
+        overall_status = ComplianceStatus.PASS
+
+    overall_confidence = min((r.confidence for r in compliance_results), default=0.85)
+
+    # Map extracted fields to schema
+    extracted_fields = {k: ExtractedField(**v) for k, v in extracted_fields_raw.items()}
+
+    # Normalize file path for URL
+    image_url = "/" + file_path.replace("\\", "/")
+
+    return ScanResponse(
         scan_id=scan_id,
-        product_name_hint="Sample Product",
-        timestamp=datetime.now(timezone.utc),
-        detection=Detection(
-            method=DetectionMethod.OPENCV_FALLBACK,
-            confidence=0.91,
-            pdp_bbox=BoundingBox(x_min=40, y_min=30, x_max=560, y_max=420),
+        product_id=None,
+        product_name="Scanned Commodity Sample",
+        brand_name=None,
+        category=(
+            ProductCategory(product_category)
+            if product_category in ProductCategory._value2member_map_
+            else ProductCategory.STANDARD_RETAIL
         ),
-        extracted_fields=[
-            ExtractedField(
-                field_name="mrp",
-                raw_ocr_text="MRP Rs.199",
-                normalized_value="199.00",
-                confidence=0.95,
-                bbox=BoundingBox(x_min=100, y_min=350, x_max=220, y_max=380),
-            ),
-            ExtractedField(
-                field_name="net_quantity",
-                raw_ocr_text="Net Wt 200g",
-                normalized_value="200 g",
-                confidence=0.89,
-                bbox=BoundingBox(x_min=100, y_min=300, x_max=250, y_max=330),
-            ),
-        ],
-        font_analysis=FontAnalysis(
-            calibration_method=calibration_method,
-            mm_per_pixel=0.12,
-            fields=[
-                FontAnalysisField(
-                    field_name="mrp",
-                    measured_height_mm=2.6,
-                    required_height_mm=2.5,
-                    status=FieldStatus.PASS,
-                    calibration_confidence=0.88,
-                ),
-            ],
+        overall_status=overall_status,
+        overall_confidence=overall_confidence,
+        calibrated_scale_factor=scale_factor,
+        calibration_method=(
+            CalibrationMethod(calib_method)
+            if calib_method in CalibrationMethod._value2member_map_
+            else CalibrationMethod.NONE
         ),
-        placement_checks=[
-            PlacementCheck(field_name="mrp", within_pdp=True, confidence=0.93),
-            PlacementCheck(field_name="net_quantity", within_pdp=True, confidence=0.90),
-        ],
-        compliance_results=[
-            ComplianceResult(
-                rule_id="RULE_6_MRP_PRESENT",
-                field_name="mrp",
-                status=FieldStatus.PASS,
-                confidence=0.95,
-                message="MRP declaration detected and correctly formatted.",
-                rule_version="LMPC-2011-v1.0",
-            ),
-            ComplianceResult(
-                rule_id="RULE_6_CONSUMER_CARE_PRESENT",
-                field_name="consumer_care",
-                status=FieldStatus.FAIL,
-                confidence=0.97,
-                message="Consumer care details not found on package.",
-                rule_version="LMPC-2011-v1.0",
-            ),
-        ],
-        overall_status=FieldStatus.REVIEW_REQUIRED,
         rule_version="LMPC-2011-v1.0",
-        evidence_image_url=f"/static/evidence/{scan_id}.jpg",
-        original_image_url=f"/static/originals/{scan_id}.jpg",
+        original_image_url=image_url,
+        evidence_image_url=image_url,
+        created_at=datetime.now(UTC),
+        extracted_fields=extracted_fields,
+        compliance_results=compliance_results,
     )

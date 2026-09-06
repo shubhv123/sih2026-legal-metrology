@@ -1,0 +1,31 @@
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = [
+    "E501",   # Line length (relaxed for ReportLab table templates and legal statutes text)
+    "B008",   # Function call in argument defaults (FastAPI Depends/Query pattern)
+    "UP006",  # Generics in type annotations
+    "UP035",  # Deprecated typing imports
+    "UP042",  # Class inherits from both str and Enum (standard Pydantic str enum pattern)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = ["backend", "."]
+explicit_package_bases = true
+ignore_missing_imports = true
+warn_unused_ignores = false
+disallow_untyped_defs = false
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:.*starlette.testclient.*:Warning",
+    "ignore:.*BlockingPortal.*:DeprecationWarning",
+]

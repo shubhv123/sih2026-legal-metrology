@@ -449,6 +449,10 @@ def generate_pdf_report(
         clean_path = evidence_image_url.lstrip("/")
         if os.path.exists(clean_path):
             try:
+                from PIL import Image as PILImage
+
+                with PILImage.open(clean_path) as pil_img:
+                    pil_img.verify()
                 img = Image(clean_path, width=4.5 * inch, height=2.2 * inch)
                 img.hAlign = "CENTER"
                 evidence_elements.append(img)

@@ -4,7 +4,9 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+*.db
 compliance.db
+backend/compliance.db
 *.egg-info/
 
 # Node (frontend)
@@ -25,6 +27,8 @@ backend/app/data/static/evidence/*
 backend/app/data/static/originals/*
 !backend/app/data/static/evidence/.gitkeep
 !backend/app/data/static/originals/.gitkeep
+static/
+backend/static/
 
 # Dataset + trained model weights - too large/binary for git, share via Drive/Roboflow instead
 ml/dataset/*

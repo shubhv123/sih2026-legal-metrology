@@ -217,7 +217,22 @@ def evaluate_compliance(
     if placement_checks:
         for pc in placement_checks:
             pc_confidence = getattr(pc, "confidence", 1.0)
-            if not pc.within_pdp:
+            if pc_confidence < 0.75:
+                tpl = placement_templates.get("review_required", {})
+                raw_msg = (
+                    tpl.get("explanation")
+                    or f"Declaration '{pc.field_name}' placement detection confidence ({pc_confidence:.2f}) is below 0.75 threshold; physical verification required."
+                )
+                msg = raw_msg.replace("{field_name}", pc.field_name).replace("{confidence:.2f}", f"{pc_confidence:.2f}")
+                results.append(ComplianceResult(
+                    rule_id="RULE_6_PLACEMENT_REVIEW",
+                    field_name=pc.field_name,
+                    status=FieldStatus.REVIEW_REQUIRED,
+                    confidence=pc_confidence,
+                    message=msg,
+                    rule_version=rule_version,
+                ))
+            elif not pc.within_pdp:
                 tpl = placement_templates.get("fail_outside_pdp", {})
                 raw_msg = tpl.get("explanation") or f"Declaration {pc.field_name} located outside Principal Display Panel."
                 msg = raw_msg.replace("{field_name}", pc.field_name)
@@ -241,6 +256,7 @@ def evaluate_compliance(
                     message=msg,
                     rule_version=rule_version,
                 ))
+
 
     return results
 

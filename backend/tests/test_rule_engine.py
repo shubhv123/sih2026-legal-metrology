@@ -205,3 +205,59 @@ def test_template_legal_citations_and_advisory_tone():
         assert len(pass_tpl["explanation"]) > 25, f"PASS explanation too brief for {field_name}"
         assert "{normalized_value}" in pass_tpl["explanation"], f"PASS template should reference value for {field_name}"
 
+
+def test_placement_confidence_symmetric_gating():
+    """
+    Priority 2 Test: Symmetrical confidence gating for placement checks.
+    Both within_pdp=True AND within_pdp=False must route to REVIEW_REQUIRED
+    when detection confidence < 0.75, ensuring low-confidence assertions
+    are never stated as definitive PASS or FAIL.
+    """
+    # 1. within_pdp=True with confidence < 0.75 -> REVIEW_REQUIRED
+    pc_true_low = [
+        PlacementCheck(
+            field_name="generic_name",
+            within_pdp=True,
+            confidence=0.55,
+        )
+    ]
+    res_true = evaluate_compliance(extracted_fields=[], placement_checks=pc_true_low)
+    p_res1 = next(r for r in res_true if r.rule_id == "RULE_6_PLACEMENT_REVIEW")
+    assert p_res1.status == FieldStatus.REVIEW_REQUIRED
+    assert p_res1.confidence == 0.55
+
+    # 2. within_pdp=False with confidence < 0.75 -> REVIEW_REQUIRED (symmetric!)
+    pc_false_low = [
+        PlacementCheck(
+            field_name="generic_name",
+            within_pdp=False,
+            confidence=0.55,
+        )
+    ]
+    res_false = evaluate_compliance(extracted_fields=[], placement_checks=pc_false_low)
+    p_res2 = next(r for r in res_false if r.rule_id == "RULE_6_PLACEMENT_REVIEW")
+    assert p_res2.status == FieldStatus.REVIEW_REQUIRED
+    assert p_res2.confidence == 0.55
+
+    # 3. High confidence >= 0.75 produces definitive statuses
+    pc_high_pass = [
+        PlacementCheck(
+            field_name="generic_name",
+            within_pdp=True,
+            confidence=0.85,
+        )
+    ]
+    res_high_pass = evaluate_compliance(extracted_fields=[], placement_checks=pc_high_pass)
+    assert any(r.rule_id == "RULE_6_PLACEMENT_PASS" and r.status == FieldStatus.PASS for r in res_high_pass)
+
+    pc_high_fail = [
+        PlacementCheck(
+            field_name="generic_name",
+            within_pdp=False,
+            confidence=0.85,
+        )
+    ]
+    res_high_fail = evaluate_compliance(extracted_fields=[], placement_checks=pc_high_fail)
+    assert any(r.rule_id == "RULE_6_PLACEMENT_OUTSIDE_PDP" and r.status == FieldStatus.FAIL for r in res_high_fail)
+
+

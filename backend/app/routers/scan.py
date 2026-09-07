@@ -9,6 +9,7 @@ Pipeline:
 6. Return structured ScanResponse and save to database.
 """
 
+import json
 import os
 import uuid
 from datetime import UTC, datetime
@@ -16,6 +17,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
+from app.db.models import ComplianceResult, Scan
 from app.db.session import get_db
 from app.schemas.compliance import ExtractedField
 from app.schemas.enums import CalibrationMethod, ComplianceStatus, ProductCategory
@@ -102,6 +104,46 @@ async def upload_and_scan_label(
 
     # Normalize file path for URL
     image_url = "/" + file_path.replace("\\", "/")
+    now_dt = datetime.now(UTC)
+
+    # 5. Persist to database so /history, /reports, and /dashboard reflect this scan
+    try:
+        scan_record = Scan(
+            id=scan_id,
+            product_id=None,
+            original_image_path=image_url,
+            evidence_image_path=image_url,
+            overall_status=overall_status.value,
+            overall_confidence=overall_confidence,
+            calibrated_scale_factor=scale_factor,
+            calibration_method=calib_method or "none",
+            rule_version="LMPC-2011-v1.0",
+            extracted_fields_json=json.dumps(extracted_fields_raw),
+            created_at=now_dt,
+        )
+        db.add(scan_record)
+
+        for cr in compliance_results:
+            cr_record = ComplianceResult(
+                scan_id=scan_id,
+                rule_id=cr.rule_id,
+                rule_name=cr.rule_name,
+                field_name=cr.field_name,
+                status=cr.status.value,
+                confidence=cr.confidence,
+                measured_value=cr.measured_value,
+                expected_value=cr.expected_value,
+                violation_reason=cr.violation_reason,
+                rule_version=cr.rule_version,
+                created_at=now_dt,
+            )
+            db.add(cr_record)
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # Degrade gracefully - never let database error crash the scan response
+        print(f"Warning: Failed to persist scan {scan_id} to DB: {e}")
 
     return ScanResponse(
         scan_id=scan_id,
@@ -124,7 +166,7 @@ async def upload_and_scan_label(
         rule_version="LMPC-2011-v1.0",
         original_image_url=image_url,
         evidence_image_url=image_url,
-        created_at=datetime.now(UTC),
+        created_at=now_dt,
         extracted_fields=extracted_fields,
         compliance_results=compliance_results,
     )

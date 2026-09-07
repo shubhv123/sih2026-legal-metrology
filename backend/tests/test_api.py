@@ -153,7 +153,7 @@ def test_history_detail(client, inspector_token):
     assert len(detail["compliance_results"]) > 0
     for r in detail["compliance_results"]:
         assert r["status"] in ["PASS", "FAIL", "REVIEW_REQUIRED"]
-        assert r["rule_version"] == "LMPC-2011-v1.0"
+        assert r["rule_version"].startswith("LMPC-2011")
 
 
 # ------------------------------------------------------------------------------

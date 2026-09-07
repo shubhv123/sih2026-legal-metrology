@@ -1,39 +1,40 @@
-"""
-Owner: ADITYA
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
-TODO(aditya):
- 1. Replace hardcoded users with a real (tiny) users table -
-    2 rows is fine for the demo: one inspector, one admin.
- 2. Use core/security.py for password hashing (passlib) and JWT
-    creation - don't store plaintext passwords even for a demo.
- 3. Add a get_current_user dependency (reads JWT from Authorization
-    header) that other routers can use to gate access by role.
-"""
+from app.core.security import create_access_token, get_current_user, verify_password
+from app.db.models import User
+from app.db.session import get_db
+from app.schemas.auth import LoginRequest, TokenResponse, UserResponse
+from app.schemas.enums import RoleEnum
 
-from fastapi import APIRouter, HTTPException
-
-from app.schemas.auth import LoginRequest, LoginResponse, UserRole
-
-router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
-
-# TEMPORARY - replace with real DB-backed auth
-_MOCK_USERS = {
-    "inspector1": {"password": "demo123", "role": UserRole.INSPECTOR},
-    "admin1": {"password": "demo123", "role": UserRole.ADMIN},
-}
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.post("/login", response_model=LoginResponse)
-async def login(payload: LoginRequest):
-    user = _MOCK_USERS.get(payload.username)
-    if not user or user["password"] != payload.password:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+@router.post("/login", response_model=TokenResponse)
+def login(request: LoginRequest, db: Session = Depends(get_db)):
+    """Authenticate inspector or admin user with 2 hardcoded roles."""
+    user = db.query(User).filter(User.username == request.username).first()
+    if not user or not verify_password(request.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password"
+        )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="User account is deactivated"
+        )
 
-    # TODO(aditya): issue a real JWT instead of this placeholder string
-    fake_token = f"demo-token-{payload.username}"
+    token = create_access_token(username=user.username, role=user.role)
 
-    return LoginResponse(
-        access_token=fake_token,
-        role=user["role"],
-        username=payload.username,
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        role=RoleEnum(user.role),
+        username=user.username,
+        full_name=user.full_name,
     )
+
+
+@router.get("/me", response_model=UserResponse)
+def get_me(current_user: User = Depends(get_current_user)):
+    """Retrieve profile of authenticated user."""
+    return current_user

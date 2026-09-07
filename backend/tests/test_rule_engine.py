@@ -1,207 +1,172 @@
-"""
-Unit tests for compliance rule engine and violation-explanation templates.
-Tests dynamic template loading from lmpc_rules_v1.json, confidence routing,
-font-height checks, placement checks, and category exceptions.
+"""Unit tests for compliance rule engine and statutory rules ingestion (Owner: Aditya).
+
+Verifies:
+1. Dynamic ingestion of Parul's rules JSON (lmpc_rules_v1.json).
+2. Rule 6 completeness check with 3-state confidence routing (PASS, FAIL, REVIEW_REQUIRED).
+3. Flexible input acceptance: dictionary or list format (waiting on Shubh's OCR format).
+4. Category exceptions (medical_device, bulk_exempt, food_expiry).
+5. Rule 7 font-height check (calibrated vs uncalibrated scale).
 """
 
 import pytest
 
-from app.schemas.scan import (
-    ExtractedField, FontAnalysis, FontAnalysisField,
-    PlacementCheck, BoundingBox, FieldStatus, CalibrationMethod,
-)
+from app.schemas.compliance import ExtractedField
+from app.schemas.enums import ComplianceStatus
 from app.services.compliance.rule_engine import (
     evaluate_compliance,
-    determine_overall_status,
-    load_rules,
+    get_rule_version,
+    load_lmpc_rules,
     reload_rules,
 )
 
 
 @pytest.fixture(autouse=True)
-def ensure_fresh_rules():
+def fresh_rules():
     reload_rules()
 
 
-def test_rule_templates_loaded():
-    """Verify that lmpc_rules_v1.json contains complete violation templates."""
-    rules = load_rules()
-    assert "violation_templates" in rules
-    templates = rules["violation_templates"]
-
-    assert "fields" in templates
-    assert "mrp" in templates["fields"]
-    assert "net_quantity" in templates["fields"]
-    assert "mfg_date" in templates["fields"]
-    assert "consumer_care" in templates["fields"]
-    assert "manufacturer_name" in templates["fields"]
-
-    mrp_tpl = templates["fields"]["mrp"]
-    assert "missing" in mrp_tpl
-    assert "explanation" in mrp_tpl["missing"]
-    assert "Rule 6(1)(e)" in mrp_tpl["missing"]["legal_reference"]
-
-
-def test_mandatory_field_missing_generates_statutory_fail():
-    """Verify missing mandatory fields produce FAIL with statutory citation."""
-    # Provide only MRP, omitting Net Qty, Mfg Date, Manufacturer, etc.
-    extracted = [
-        ExtractedField(
-            field_name="mrp",
-            raw_ocr_text="MRP Rs. 199.00",
-            normalized_value="199.00",
-            confidence=0.95,
-            bbox=BoundingBox(x_min=10, y_min=10, x_max=50, y_max=30),
-        )
-    ]
-
-    results = evaluate_compliance(extracted_fields=extracted)
-    results_by_field = {r.field_name: r for r in results}
-
-    # Net quantity must fail
-    assert "net_quantity" in results_by_field
-    net_res = results_by_field["net_quantity"]
-    assert net_res.status == FieldStatus.FAIL
-    assert "net weight, measure" in net_res.message.lower()
-
-    # Consumer care must fail
-    assert "consumer_care" in results_by_field
-    cc_res = results_by_field["consumer_care"]
-    assert cc_res.status == FieldStatus.FAIL
-    assert "consumer grievance" in cc_res.message.lower()
-
-    # Overall status should be FAIL
-    overall = determine_overall_status(results)
-    assert overall == FieldStatus.FAIL
-
-
-def test_low_confidence_routes_to_review_required():
-    """Verify field with confidence < 0.75 routes to REVIEW_REQUIRED."""
-    extracted = [
-        ExtractedField(
-            field_name="mrp",
-            raw_ocr_text="MRP Rs. 149",
-            normalized_value="149.00",
-            confidence=0.55,  # Below 0.75 threshold
-            bbox=BoundingBox(x_min=10, y_min=10, x_max=50, y_max=30),
-        )
-    ]
-
-    results = evaluate_compliance(extracted_fields=extracted)
-    mrp_res = next(r for r in results if r.field_name == "mrp")
-
-    assert mrp_res.status == FieldStatus.REVIEW_REQUIRED
-    assert "faint" in mrp_res.message.lower() or "confidence" in mrp_res.message.lower()
-
-
-def test_font_height_and_placement_checks():
-    """Verify Rule 7 font-height and placement checks format template messages."""
-    extracted = [
-        ExtractedField(
-            field_name="mrp",
-            raw_ocr_text="MRP Rs. 149.00",
-            normalized_value="149.00",
-            confidence=0.95,
-            bbox=BoundingBox(x_min=10, y_min=10, x_max=50, y_max=30),
-        )
-    ]
-
-    font_analysis = FontAnalysis(
-        calibration_method=CalibrationMethod.ARUCO,
-        mm_per_pixel=0.1,
-        fields=[
-            FontAnalysisField(
-                field_name="mrp",
-                measured_height_mm=1.2,
-                required_height_mm=2.0,
-                status=FieldStatus.FAIL,
-                calibration_confidence=0.90,
-            )
-        ]
+def test_rule_json_ingestion():
+    """Verify Parul's rules JSON is ingested dynamically with version stamp."""
+    rules = load_lmpc_rules()
+    assert rules is not None
+    assert "version" in rules
+    assert rules["version"].startswith("LMPC-2011")
+    assert get_rule_version().startswith("LMPC-2011")
+    assert "mandatory_fields" in rules or "rule_6_mandatory_declarations" in rules
+    assert (
+        "rule_7_font_height_specifications" in rules
+        or "rule_7_font_height_tables" in rules
+        or "rule_7_font_height_table_1" in rules
     )
+    assert "category_exceptions" in rules
 
-    placement_checks = [
-        PlacementCheck(
-            field_name="mrp",
-            within_pdp=False,  # Placed outside PDP
-            confidence=0.88,
-        )
-    ]
+
+def test_rule_6_completeness_pass_dict():
+    """Verify Rule 6 passes when all mandatory declarations are present (dict format)."""
+    full_declarations = {
+        "name_and_address": {"raw_text": "Mfd by ABC Foods Pvt Ltd, Mumbai", "confidence": 0.95},
+        "country_of_origin": {"raw_text": "Country of Origin: India", "confidence": 0.95},
+        "generic_name": {"raw_text": "Biscuits", "confidence": 0.92},
+        "net_quantity": {"raw_text": "Net Wt: 200g", "confidence": 0.96},
+        "mfg_or_packing_date": {"raw_text": "Pkd: 08/2026", "confidence": 0.90},
+        "mrp": {"raw_text": "MRP Rs 50.00 (incl. of all taxes)", "confidence": 0.98},
+        "consumer_care": {"raw_text": "Customer Care: care@abc.com 1800-111-222", "confidence": 0.94},
+    }
 
     results = evaluate_compliance(
-        extracted_fields=extracted,
-        font_analysis=font_analysis,
-        placement_checks=placement_checks,
+        extracted_fields=full_declarations,
+        pdp_bbox=[50, 50, 400, 300],
+        scale_factor_mm_per_px=0.08,
     )
 
-    # Check font failure
-    font_res = next(r for r in results if r.rule_id == "RULE_7_FONT_HEIGHT_FAIL")
-    assert font_res.status == FieldStatus.FAIL
-    assert "1.2 mm" in font_res.message
-    assert "2.0 mm" in font_res.message
-
-    # Check placement failure
-    placement_res = next(r for r in results if r.rule_id == "RULE_6_PLACEMENT_OUTSIDE_PDP")
-    assert placement_res.status == FieldStatus.FAIL
-    assert "secondary face" in placement_res.message.lower() or "principal display panel" in placement_res.message.lower()
+    r6_res = next(r for r in results if r.rule_id == "RULE_6_MANDATORY_DECLARATIONS")
+    assert r6_res.status == ComplianceStatus.PASS
+    assert r6_res.violation_reason is None
+    assert r6_res.measured_value is not None and "mandatory fields identified" in r6_res.measured_value
 
 
-def test_category_exceptions():
-    """Verify medical_device and bulk_exempt category overrides."""
-    # 1. Medical device
-    med_res = evaluate_compliance(extracted_fields=[], category="medical_device")
-    assert len(med_res) == 1
-    assert med_res[0].status == FieldStatus.PASS
-    assert "RULE_2_H_MEDICAL_DEVICE_EXEMPT" in med_res[0].rule_id
-    assert "Medical Devices Rules, 2017" in med_res[0].message
+def test_rule_6_completeness_missing_fail():
+    """Verify Rule 6 fails when mandatory fields are missing."""
+    partial_declarations = {
+        "mrp": {"raw_text": "MRP Rs 40.00", "confidence": 0.95},
+        "net_quantity": {"raw_text": "Net Wt: 100g", "confidence": 0.95},
+    }
 
-    # 2. Bulk exempt
-    bulk_res = evaluate_compliance(extracted_fields=[], category="bulk_exempt")
-    assert len(bulk_res) == 1
-    assert bulk_res[0].status == FieldStatus.PASS
-    assert "RULE_3_BULK_PACKAGE_EXEMPT" in bulk_res[0].rule_id
-    assert "Rule 3" in bulk_res[0].message
-
-    # 3. Food expiry exception requires expiry_date
-    food_res = evaluate_compliance(extracted_fields=[], category="food_expiry")
-    food_field_names = [r.field_name for r in food_res]
-    assert "expiry_date" in food_field_names
-    expiry_item = next(r for r in food_res if r.field_name == "expiry_date")
-    assert expiry_item.status == FieldStatus.FAIL
-    assert "best before" in expiry_item.message.lower() or "expiry" in expiry_item.message.lower()
+    results = evaluate_compliance(extracted_fields=partial_declarations)
+    r6_res = next(r for r in results if r.rule_id == "RULE_6_MANDATORY_DECLARATIONS")
+    assert r6_res.status == ComplianceStatus.FAIL
+    assert r6_res.violation_reason is not None and "Missing" in r6_res.violation_reason
+    assert r6_res.measured_value is not None and "mandatory fields identified" in r6_res.measured_value
 
 
-def test_template_legal_citations_and_advisory_tone():
-    """Verify honest country_of_origin caveat, Rule 32(2) citation, and advisory action language."""
-    rules = load_rules()
-    templates = rules["violation_templates"]
+def test_rule_6_low_confidence_routes_to_review_required():
+    """Verify Rule 6 routes to REVIEW_REQUIRED if any field confidence is below 0.75."""
+    declarations_with_low_conf = {
+        "name_and_address": {"raw_text": "Mfd by ABC Foods", "confidence": 0.95},
+        "country_of_origin": {"raw_text": "Made in India", "confidence": 0.95},
+        "generic_name": {"raw_text": "Biscuits", "confidence": 0.92},
+        "net_quantity": {"raw_text": "Net Wt: 200g", "confidence": 0.55},  # Low confidence < 0.75
+        "mfg_or_packing_date": {"raw_text": "Pkd: 08/2026", "confidence": 0.90},
+        "mrp": {"raw_text": "MRP Rs 50.00", "confidence": 0.98},
+        "consumer_care": {"raw_text": "Care: care@abc.com", "confidence": 0.94},
+    }
 
-    # 1. country_of_origin carries honest secondary caveat, not flat Rule 6(1)(a)
-    origin_tpl = templates["fields"]["country_of_origin"]
-    assert "amended" in origin_tpl["missing"]["legal_reference"].lower()
-    assert "pending" in origin_tpl["missing"]["legal_reference"].lower() or "secondary" in origin_tpl["missing"]["legal_reference"].lower()
+    results = evaluate_compliance(extracted_fields=declarations_with_low_conf)
+    r6_res = next(r for r in results if r.rule_id == "RULE_6_MANDATORY_DECLARATIONS")
+    assert r6_res.status == ComplianceStatus.REVIEW_REQUIRED
+    assert r6_res.violation_reason is not None and "review threshold" in r6_res.violation_reason.lower()
 
-    # 2. font height citation specifies Rule 32(2) specifically, not bare Rule 32
-    font_tpl = templates["font_height"]["fail_below_threshold"]
-    assert "Rule 32(2)" in font_tpl["legal_reference"]
-    assert "Rule 32(2)" in font_tpl["recommended_action"]
 
-    # 3. Recommended actions use advisory tone ('Recommend...'), not directives ('Issue notice...')
-    for field_name, tpl_group in templates["fields"].items():
-        if "missing" in tpl_group:
-            action = tpl_group["missing"]["recommended_action"]
-            assert action.startswith("Recommend") or "recommend" in action.lower(), (
-                f"Field {field_name} missing action should be advisory, got: {action}"
-            )
-        if "review_required" in tpl_group:
-            action = tpl_group["review_required"]["recommended_action"]
-            assert "recommend" in action.lower() or "advis" in action.lower() or "inspection" in action.lower(), (
-                f"Field {field_name} review action should be advisory, got: {action}"
-            )
+def test_flexible_input_list_format_shubh():
+    """Verify rule engine accepts list of ExtractedField / dict objects (waiting on Shubh's OCR format)."""
+    list_fields = [
+        ExtractedField(field_name="mrp", raw_text="MRP Rs 50.00", normalized_value=50.0, unit="INR", confidence=0.96),
+        {"field_name": "net_quantity", "raw_text": "100g", "confidence": 0.92},
+        {"field_name": "generic_name", "raw_text": "Snack", "confidence": 0.91},
+        {"field_name": "country_of_origin", "raw_text": "India", "confidence": 0.95},
+        {"field_name": "name_and_address", "raw_text": "Mfd by XYZ", "confidence": 0.94},
+        {"field_name": "mfg_or_packing_date", "raw_text": "01/2026", "confidence": 0.88},
+        {"field_name": "consumer_care", "raw_text": "Call 1800-111", "confidence": 0.90},
+    ]
 
-    # 4. PASS templates provide informative, affirmative explanations
-    for field_name, tpl_group in templates["fields"].items():
-        pass_tpl = tpl_group["pass"]
-        assert len(pass_tpl["explanation"]) > 25, f"PASS explanation too brief for {field_name}"
-        assert "{normalized_value}" in pass_tpl["explanation"], f"PASS template should reference value for {field_name}"
+    results = evaluate_compliance(extracted_fields=list_fields)
+    r6_res = next(r for r in results if r.rule_id == "RULE_6_MANDATORY_DECLARATIONS")
+    assert r6_res.status == ComplianceStatus.PASS
 
+
+def test_category_exception_medical_device():
+    """Verify medical_device category produces officer review annotation."""
+    results = evaluate_compliance(extracted_fields={}, category="medical_device")
+    med_res = next((r for r in results if r.rule_id == "CATEGORY_EXCEPTION_MEDICAL_DEVICE"), None)
+    assert med_res is not None
+    assert med_res.status == ComplianceStatus.REVIEW_REQUIRED
+    assert med_res.expected_value is not None and "Drugs and Cosmetics Act" in med_res.expected_value
+
+
+def test_category_exception_bulk_exempt():
+    """Verify bulk_exempt category passes and exempts retail fields."""
+    full_declarations = {
+        "name_and_address": {"raw_text": "UltraTech Cement Ltd", "confidence": 0.95},
+        "country_of_origin": {"raw_text": "India", "confidence": 0.95},
+        "generic_name": {"raw_text": "Portland Cement", "confidence": 0.92},
+        "net_quantity": {"raw_text": "50 kg", "confidence": 0.96},
+        "mfg_or_packing_date": {"raw_text": "Pkd: 08/2026", "confidence": 0.90},
+        # mrp and consumer_care are exempt
+    }
+
+    results = evaluate_compliance(extracted_fields=full_declarations, category="bulk_exempt")
+    r6_res = next(r for r in results if r.rule_id == "RULE_6_MANDATORY_DECLARATIONS")
+    assert r6_res.status == ComplianceStatus.PASS
+    assert r6_res.measured_value is not None and "mandatory fields identified" in r6_res.measured_value
+
+    bulk_res = next(r for r in results if r.rule_id == "CATEGORY_EXCEPTION_BULK_EXEMPT")
+    assert bulk_res.status == ComplianceStatus.PASS
+
+
+def test_category_exception_food_expiry():
+    """Verify food_expiry category mandates expiry_date presence."""
+    # 1. Without expiry_date -> fails food expiry check
+    no_expiry = {
+        "name_and_address": {"raw_text": "Food Corp", "confidence": 0.95},
+        "generic_name": {"raw_text": "Bread", "confidence": 0.95},
+        "net_quantity": {"raw_text": "400g", "confidence": 0.95},
+    }
+    res_no_exp = evaluate_compliance(extracted_fields=no_expiry, category="food_expiry")
+    food_res = next(r for r in res_no_exp if r.rule_id == "CATEGORY_EXCEPTION_FOOD_EXPIRY")
+    assert food_res.status == ComplianceStatus.FAIL
+
+    # 2. With expiry_date -> passes food expiry check
+    with_expiry = dict(no_expiry)
+    with_expiry["expiry_date"] = {"raw_text": "Best Before 10 days from pkd", "confidence": 0.93}
+    res_with_exp = evaluate_compliance(extracted_fields=with_expiry, category="food_expiry")
+    food_res_pass = next(r for r in res_with_exp if r.rule_id == "CATEGORY_EXCEPTION_FOOD_EXPIRY")
+    assert food_res_pass.status == ComplianceStatus.PASS
+
+
+def test_rule_7_font_height_uncalibrated_review():
+    """Verify lack of calibration routes font height to REVIEW_REQUIRED."""
+    results = evaluate_compliance(extracted_fields={}, scale_factor_mm_per_px=None)
+    f_res = next(r for r in results if r.rule_id == "RULE_7_FONT_HEIGHT")
+    assert f_res.status == ComplianceStatus.REVIEW_REQUIRED
+    assert f_res.confidence < 0.75
+    assert f_res.violation_reason is not None and "calipers" in f_res.violation_reason

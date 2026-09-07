@@ -1,29 +1,39 @@
-"""
-Owner: ADITYA
+from fastapi import APIRouter, Depends, Response
+from sqlalchemy.orm import Session
 
-TODO(aditya):
- 1. /pdf -> app.services.reporting.pdf_report.generate() -> FileResponse
- 2. /docx -> app.services.reporting.docx_report.generate() -> FileResponse
- 3. /json -> just return the stored ScanResult as JSON (already a dict)
- All three pull the SAME stored ScanResult - don't recompute anything,
- just re-render it in a different format.
-"""
+from app.db.session import get_db
+from app.routers.history import get_scan_details
+from app.services.reporting import generate_docx_report, generate_json_report, generate_pdf_report
 
-from fastapi import APIRouter, HTTPException
-
-router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
+router = APIRouter(prefix="/reports", tags=["Compliance Reports"])
 
 
 @router.get("/{scan_id}/pdf")
-async def get_pdf_report(scan_id: str):
-    raise HTTPException(status_code=501, detail="TODO(aditya): implement PDF export")
+def export_pdf_report(scan_id: str, db: Session = Depends(get_db)):
+    """Export evidence-backed compliance inspection report as PDF."""
+    scan_data = get_scan_details(scan_id=scan_id, db=db)
+    pdf_bytes = generate_pdf_report(scan_data)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="inspection_report_{scan_id}.pdf"'},
+    )
 
 
 @router.get("/{scan_id}/docx")
-async def get_docx_report(scan_id: str):
-    raise HTTPException(status_code=501, detail="TODO(aditya): implement DOCX export")
+def export_docx_report(scan_id: str, db: Session = Depends(get_db)):
+    """Export inspection report in editable DOCX format."""
+    scan_data = get_scan_details(scan_id=scan_id, db=db)
+    docx_bytes = generate_docx_report(scan_data)
+    return Response(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f"attachment; filename=compliance_report_{scan_id}.docx"},
+    )
 
 
 @router.get("/{scan_id}/json")
-async def get_json_report(scan_id: str):
-    raise HTTPException(status_code=501, detail="TODO(aditya): return stored ScanResult as JSON")
+def export_json_report(scan_id: str, db: Session = Depends(get_db)):
+    """Export structured JSON compliance audit record."""
+    scan_data = get_scan_details(scan_id=scan_id, db=db)
+    return generate_json_report(scan_data)

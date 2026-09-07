@@ -1,40 +1,37 @@
-import os
+"""
+Legal Metrology Compliance Checker FastAPI Application
+SIH26034 - Automated packaging compliance verification API.
+"""
+
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.core.config import settings
 from app.db.seed import seed_database
 from app.db.session import init_db
-from app.routers import (
-    auth_router,
-    dashboard_router,
-    history_router,
-    reports_router,
-    scan_router,
-    search_router,
-)
+from app.routers import auth, dashboard, history, reports, scan, search
+
+STATIC_DIR = Path(__file__).resolve().parent / "data" / "static"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: initialize database and seed demo data
-    print("Ensuring database tables exist...")
+    # Startup: ensure database tables exist and seed demo data
     init_db()
-    print("Seeding initial demo data if needed...")
     seed_database()
-    os.makedirs("static/uploads", exist_ok=True)
+    STATIC_DIR.mkdir(parents=True, exist_ok=True)
+    (STATIC_DIR / "evidence").mkdir(parents=True, exist_ok=True)
+    (STATIC_DIR / "originals").mkdir(parents=True, exist_ok=True)
     yield
-    # Shutdown
-    print("Application shutdown clean.")
 
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    description="Automated Legal Metrology (Packaged Commodities) Rules, 2011 Compliance Verification API",
+    title="Legal Metrology Compliance Checker",
+    description="Automated packaging compliance verification API per Legal Metrology (Packaged Commodities) Rules, 2011",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -42,32 +39,41 @@ app = FastAPI(
 # CORS configuration for Vite frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Static files for original and annotated evidence images
-os.makedirs("static/uploads", exist_ok=True)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Static file serving
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+(STATIC_DIR / "evidence").mkdir(parents=True, exist_ok=True)
+(STATIC_DIR / "originals").mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # Mount API v1 Routers
-api_v1_prefix = settings.API_V1_STR
-app.include_router(auth_router, prefix=api_v1_prefix)
-app.include_router(scan_router, prefix=api_v1_prefix)
-app.include_router(history_router, prefix=api_v1_prefix)
-app.include_router(search_router, prefix=api_v1_prefix)
-app.include_router(dashboard_router, prefix=api_v1_prefix)
-app.include_router(reports_router, prefix=api_v1_prefix)
+api_v1_prefix = "/api/v1"
+app.include_router(auth.router, prefix=api_v1_prefix)
+app.include_router(scan.router)  # scan.router already defines /api/v1/scan and /scan
+app.include_router(history.router, prefix=api_v1_prefix)
+app.include_router(search.router, prefix=api_v1_prefix)
+app.include_router(dashboard.router, prefix=api_v1_prefix)
+app.include_router(reports.router, prefix=api_v1_prefix)
 
 
 @app.get("/")
 def root():
     return {
-        "service": settings.PROJECT_NAME,
+        "service": "Legal Metrology Compliance Checker",
         "status": "online",
-        "docs_url": "/docs",
         "api_v1": api_v1_prefix,
         "rule_version": "LMPC-2011-v1.0",
     }
@@ -83,7 +89,6 @@ def health_v1():
     return {"status": "ok"}
 
 
-# Global safety error handler: never return raw unhandled 500 crash
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(

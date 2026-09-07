@@ -139,6 +139,17 @@
         "I",
         "l"
       ]
+    },
+    "font_height_rule_mapping": {
+      "net_quantity": "table_1_or_2_by_declaration_type",
+      "mrp": "letters_height_specification",
+      "mfg_date": "letters_height_specification",
+      "unit_sale_price": "letters_height_specification",
+      "consumer_care": "letters_height_specification",
+      "manufacturer_name": "letters_height_specification",
+      "generic_name": "letters_height_specification",
+      "country_of_origin": "letters_height_specification",
+      "expiry_date": "letters_height_specification"
     }
   },
   "category_exceptions": {
@@ -363,8 +374,15 @@
         "summary": "Declaration properly positioned on Principal Display Panel",
         "legal_reference": "Rule 6 and Rule 8 of LMPC Rules, 2011",
         "explanation": "Declaration '{field_name}' is positioned within the Principal Display Panel (PDP) ensuring prominent legibility under Rule 6 and Rule 8."
+      },
+      "review_required": {
+        "summary": "Placement confidence below threshold — physical panel inspection required",
+        "legal_reference": "Rule 6 and Rule 8 of LMPC Rules, 2011",
+        "explanation": "Declaration '{field_name}' placement detection confidence ({confidence:.2f}) is below the statutory 0.75 threshold; physical verification required.",
+        "recommended_action": "Verify package orientation and confirm declaration legibility on the physical principal display panel."
       }
     },
+
     "exceptions": {
       "medical_device": {
         "summary": "Exempt from LMPC declarations under 2025 Amendment",

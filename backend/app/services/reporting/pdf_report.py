@@ -6,9 +6,13 @@ and stamps the statutory rule version.
 """
 
 import io
+import logging
 import os
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -445,19 +449,60 @@ def generate_pdf_report(
 
     image_drawn = False
     if evidence_image_url:
-        # Check if file exists on disk
-        clean_path = evidence_image_url.lstrip("/")
-        if os.path.exists(clean_path):
+        filename = os.path.basename(evidence_image_url)
+        base_app_dir = Path(__file__).resolve().parent.parent.parent
+        candidate_paths = [
+            evidence_image_url,
+            evidence_image_url.lstrip("/"),
+            str(base_app_dir / "data" / "static" / "evidence" / filename),
+            str(base_app_dir / "data" / "static" / "originals" / filename),
+            os.path.join(os.getcwd(), "backend", "app", "data", "static", "evidence", filename),
+            os.path.join(os.getcwd(), "app", "data", "static", "evidence", filename),
+            os.path.join(os.getcwd(), "static", "evidence", filename),
+        ]
+
+        resolved_img_path = None
+        for p in candidate_paths:
+            if os.path.isfile(p):
+                resolved_img_path = p
+                break
+
+        if resolved_img_path:
             try:
                 from PIL import Image as PILImage
+                with PILImage.open(resolved_img_path) as pil_img:
+                    orig_w, orig_h = pil_img.size
 
-                with PILImage.open(clean_path) as pil_img:
-                    pil_img.verify()
-                img = Image(clean_path, width=4.5 * inch, height=2.2 * inch)
-                img.hAlign = "CENTER"
-                evidence_elements.append(img)
+                    # Downsample image for PDF embedding to maintain crisp quality while keeping file size small (~350KB)
+                    if orig_w > 1200 or orig_h > 1200:
+                        pil_img_copy = pil_img.copy()
+                        pil_img_copy.thumbnail((1200, 1200), PILImage.Resampling.LANCZOS)
+                        img_buffer = io.BytesIO()
+                        pil_img_copy.save(img_buffer, format="JPEG", quality=85, optimize=True)
+                        img_buffer.seek(0)
+                        img_source = img_buffer
+                    else:
+                        img_source = resolved_img_path
+
+                max_width = 6.0 * inch
+                max_height = 3.2 * inch
+                scale = min(max_width / max(1, orig_w), max_height / max(1, orig_h))
+                draw_w = orig_w * scale
+                draw_h = orig_h * scale
+
+                img_flowable = Image(img_source, width=draw_w, height=draw_h)
+                img_flowable.hAlign = "CENTER"
+                evidence_elements.append(img_flowable)
+                evidence_elements.append(Spacer(1, 4))
+                evidence_elements.append(
+                    Paragraph(
+                        f"<font size=7 color='#64748B'><b>Figure 1:</b> Annotated packaging inspection evidence ({filename}) with calibrated PDP and field bounding boxes.</font>",
+                        rule_stamp_style,
+                    )
+                )
                 image_drawn = True
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Could not load physical image flowable: {e}")
                 image_drawn = False
 
     if not image_drawn:

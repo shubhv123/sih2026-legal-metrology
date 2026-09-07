@@ -21,11 +21,11 @@ export default function Results() {
   );
   const [loading, setLoading] = useState(!scanResult && Boolean(scanId));
   const [error, setError] = useState(null);
-  const [showOverlays, setShowOverlays] = useState(true);
   const [viewTab, setViewTab] = useState("checklist"); // checklist | font_table | raw_tokens
   const [adjudicatingRuleId, setAdjudicatingRuleId] = useState(null);
   const [officerRemarks, setOfficerRemarks] = useState("");
   const [officerVerdict, setOfficerVerdict] = useState("PASS");
+  const [filterStatus, setFilterStatus] = useState("ALL"); // ALL | FAIL | REVIEW_REQUIRED | PASS
 
   useEffect(() => {
     if (!scanResult && scanId) {
@@ -102,13 +102,6 @@ export default function Results() {
 
   const currentTheme = statusTheme[scanResult.overall_status] || statusTheme.REVIEW_REQUIRED;
 
-  // Extract font measurements for the 3D badges
-  const fontFields = scanResult.font_analysis?.fields || [];
-  const primaryFont = fontFields[0] || {
-    field_name: "net_quantity",
-    measured_height_mm: 2.5,
-    status: "PASS",
-  };
 
   const handleAdjudicateSubmit = (targetRuleId) => {
     if (!scanResult) return;
@@ -163,16 +156,6 @@ export default function Results() {
 
         {/* Action controls */}
         <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setShowOverlays(!showOverlays)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium border transition-colors ${
-              showOverlays
-                ? "bg-neutral-900 text-white border-black"
-                : "bg-white text-neutral-600 border-neutral-200 hover:text-black"
-            }`}
-          >
-            {showOverlays ? "Hide 3D Telemetry" : "Show 3D Telemetry"}
-          </button>
           <a
             href={getReportUrl(scanResult.scan_id, "pdf")}
             target="_blank"
@@ -234,60 +217,6 @@ export default function Results() {
                     }
                   }}
                 />
-
-                {/* ACTIVE LASER SCANNING BEAM SWEEP OVERLAY */}
-                <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                  {/* Glowing thin diamond-white horizontal scanning line */}
-                  <div className="absolute left-0 right-0 h-[2px] bg-white shadow-[0_0_12px_rgba(255,255,255,1),0_0_24px_rgba(255,255,255,0.8),0_0_36px_rgba(56,189,248,0.5)] animate-laser-sweep z-20">
-                    {/* Beam Light Cone Wash */}
-                    <div className="absolute -top-10 left-0 right-0 h-10 bg-gradient-to-t from-white/20 to-transparent" />
-                  </div>
-                </div>
-
-                {/* FLOATING 3D RECTANGULAR WHITE BADGES (As seen in the Mockup) */}
-                {showOverlays && (
-                  <>
-                    {/* Badge 1: Font Height Numeral (Top Right of Box) */}
-                    <div className="absolute top-[18%] right-[8%] z-30 badge-3d px-3 py-1.5 rounded-md flex items-center space-x-1.5 transition-transform hover:scale-105 cursor-pointer">
-                      <span className="text-[11px] font-mono font-bold tracking-wider text-neutral-900">
-                        FONT HEIGHT // {primaryFont.measured_height_mm?.toFixed(2)}mm
-                      </span>
-                      <span className={`text-[10px] font-mono font-bold px-1 rounded ${primaryFont.status === "PASS" ? "text-emerald-600" : "text-rose-600"}`}>
-                        [{primaryFont.status === "PASS" ? "OK" : "FAIL"}]
-                      </span>
-                    </div>
-
-                    {/* Badge 2: Font Height Required (Mid Right) */}
-                    <div className="absolute top-[32%] right-[14%] z-30 badge-3d px-3 py-1.5 rounded-md flex items-center space-x-1.5 transition-transform hover:scale-105 cursor-pointer">
-                      <span className="text-[11px] font-mono font-bold tracking-wider text-neutral-900">
-                        REQ MIN // {primaryFont.required_height_mm?.toFixed(2) || "2.00"}mm
-                      </span>
-                      <span className="text-[10px] font-mono font-bold text-emerald-600 px-1 rounded">
-                        [TABLE-I]
-                      </span>
-                    </div>
-
-                    {/* Badge 3: MRP Declaration (Mid Left) */}
-                    <div className="absolute top-[48%] left-[10%] z-30 badge-3d px-3 py-1.5 rounded-md flex items-center space-x-1.5 transition-transform hover:scale-105 cursor-pointer">
-                      <span className="text-[11px] font-mono font-bold tracking-wider text-neutral-900">
-                        MRP // ₹{scanResult.extracted_fields?.find(f => f.field_name === "mrp")?.normalized_value || "120.00"}
-                      </span>
-                      <span className="text-[10px] font-mono font-bold text-emerald-600 px-1 rounded">
-                        [OK]
-                      </span>
-                    </div>
-
-                    {/* Badge 4: Net Quantity (Bottom Right) */}
-                    <div className="absolute bottom-[20%] right-[10%] z-30 badge-3d px-3 py-1.5 rounded-md flex items-center space-x-1.5 transition-transform hover:scale-105 cursor-pointer">
-                      <span className="text-[11px] font-mono font-bold tracking-wider text-neutral-900">
-                        NET QTY // {scanResult.extracted_fields?.find(f => f.field_name === "net_quantity")?.normalized_value || "500 mL"}
-                      </span>
-                      <span className="text-[10px] font-mono font-bold text-emerald-600 px-1 rounded">
-                        [OK]
-                      </span>
-                    </div>
-                  </>
-                )}
               </div>
             </div>
 
@@ -408,11 +337,11 @@ export default function Results() {
         {/* ============================================================ */}
         {/* RIGHT ASSESSMENT COLUMN: Editorial Checklist & Matte-Black Button */}
         {/* ============================================================ */}
-        <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_4px_25px_rgba(0,0,0,0.03)] p-6 md:p-8 flex flex-col justify-between space-y-6">
+        <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_4px_25px_rgba(0,0,0,0.03)] p-6 md:p-8 flex flex-col justify-between space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)]">
           
-          <div className="space-y-6">
-            {/* Heading & Subtitle */}
-            <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-4">
+          <div className="flex flex-col space-y-4 flex-1 min-h-0">
+            {/* Heading & Subtitle (Pinned at top) */}
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3 shrink-0">
               <div>
                 <h2 className="text-xl font-bold tracking-tight text-neutral-900 font-sans">
                   Assessment
@@ -426,188 +355,248 @@ export default function Results() {
               </div>
             </div>
 
-            {/* NUMBERED EDITORIAL LEGAL CHECKLIST (01, 02, 03... as seen in Mockup) */}
-            <div className="divide-y divide-[#F0F2F5] space-y-0">
+            {/* Quick Status Filter Tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] font-mono shrink-0">
+              <button
+                type="button"
+                onClick={() => setFilterStatus("ALL")}
+                className={`px-2.5 py-1 rounded-md transition-colors ${
+                  filterStatus === "ALL"
+                    ? "bg-neutral-900 text-white font-bold"
+                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                }`}
+              >
+                All ({(scanResult.compliance_results?.length || 0) + 2})
+              </button>
+              {scanResult.compliance_results?.some((r) => r.status === "FAIL") && (
+                <button
+                  type="button"
+                  onClick={() => setFilterStatus("FAIL")}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                    filterStatus === "FAIL"
+                      ? "bg-rose-600 text-white font-bold"
+                      : "bg-rose-50 text-rose-700 hover:bg-rose-100"
+                  }`}
+                >
+                  Violations ({scanResult.compliance_results?.filter((r) => r.status === "FAIL").length + (scanResult.overall_status === "FAIL" ? 1 : 0)})
+                </button>
+              )}
+              {scanResult.compliance_results?.some((r) => r.status === "REVIEW_REQUIRED") && (
+                <button
+                  type="button"
+                  onClick={() => setFilterStatus("REVIEW_REQUIRED")}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                    filterStatus === "REVIEW_REQUIRED"
+                      ? "bg-amber-600 text-white font-bold"
+                      : "bg-amber-50 text-amber-800 hover:bg-amber-100"
+                  }`}
+                >
+                  Review ({scanResult.compliance_results?.filter((r) => r.status === "REVIEW_REQUIRED").length})
+                </button>
+              )}
+              {scanResult.compliance_results?.some((r) => r.status === "PASS") && (
+                <button
+                  type="button"
+                  onClick={() => setFilterStatus("PASS")}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                    filterStatus === "PASS"
+                      ? "bg-emerald-600 text-white font-bold"
+                      : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                  }`}
+                >
+                  Compliant ({scanResult.compliance_results?.filter((r) => r.status === "PASS").length + 1})
+                </button>
+              )}
+            </div>
+
+            {/* SCROLLABLE NUMBERED EDITORIAL LEGAL CHECKLIST */}
+            <div className="overflow-y-auto flex-1 min-h-0 max-h-[480px] lg:max-h-[calc(100vh-270px)] pr-2 divide-y divide-[#F0F2F5] space-y-0 focus:outline-none">
               
               {/* 01 Legal compliance checklist */}
-              <div className="py-4 space-y-1 group">
-                <div className="flex items-baseline space-x-2.5">
-                  <span className="font-mono text-sm font-bold text-neutral-900 tracking-tight">01</span>
-                  <div className="flex-1 flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
-                      Overall Compliance Checklist
-                    </h3>
-                    <span className={`text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded ${currentTheme.pill}`}>
-                      {scanResult.overall_status}
-                    </span>
+              {(filterStatus === "ALL" || filterStatus === scanResult.overall_status) && (
+                <div className="py-3.5 space-y-1 group">
+                  <div className="flex items-baseline space-x-2.5">
+                    <span className="font-mono text-sm font-bold text-neutral-900 tracking-tight">01</span>
+                    <div className="flex-1 flex items-center justify-between">
+                      <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                        Overall Compliance Checklist
+                      </h3>
+                      <span className={`text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded ${currentTheme.pill}`}>
+                        {scanResult.overall_status}
+                      </span>
+                    </div>
                   </div>
+                  <p className="text-xs text-neutral-500 pl-6 leading-relaxed">
+                    Automated computer vision negative space and declaration assessment per LMPC 2011 specifications.
+                  </p>
                 </div>
-                <p className="text-xs text-neutral-500 pl-6 leading-relaxed">
-                  Automated computer vision negative space and declaration assessment per LMPC 2011 specifications.
-                </p>
-              </div>
+              )}
 
               {/* Dynamic Compliance Results from rule engine */}
-              {scanResult.compliance_results?.map((res, index) => {
-                const num = (index + 2).toString().padStart(2, "0");
-                const itemTheme = statusTheme[res.status] || statusTheme.REVIEW_REQUIRED;
-                const fieldTitle =
-                  res.rule_name ||
-                  (res.field_name ? res.field_name.replace(/_/g, " ") : "Statutory Declaration");
-                const messageText =
-                  res.message ||
-                  res.violation_reason ||
-                  (res.status === "PASS"
-                    ? `${fieldTitle} verified compliant per ${res.rule_version || "LMPC 2011"}.`
-                    : `Non-compliance detected in ${fieldTitle}.`);
+              {scanResult.compliance_results
+                ?.filter((res) => filterStatus === "ALL" || res.status === filterStatus)
+                .map((res, index) => {
+                  const num = (index + 2).toString().padStart(2, "0");
+                  const itemTheme = statusTheme[res.status] || statusTheme.REVIEW_REQUIRED;
+                  const fieldTitle =
+                    res.rule_name ||
+                    (res.field_name ? res.field_name.replace(/_/g, " ") : "Statutory Declaration");
+                  const messageText =
+                    res.message ||
+                    res.violation_reason ||
+                    (res.status === "PASS"
+                      ? `${fieldTitle} verified compliant per ${res.rule_version || "LMPC 2011"}.`
+                      : `Non-compliance detected in ${fieldTitle}.`);
 
-                return (
-                  <div key={res.rule_id || index} className="py-4 space-y-1 group">
-                    <div className="flex items-baseline space-x-2.5">
-                      <span className="font-mono text-sm font-bold text-neutral-900 tracking-tight">
-                        {num}
-                      </span>
-                      <div className="flex-1 flex items-center justify-between">
-                        <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
-                          {fieldTitle}
-                        </h3>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-[10px] font-mono text-neutral-400">
-                            {Math.round((res.confidence || 0.9) * 100)}%
-                          </span>
-                          <span className={`text-[9px] font-mono font-bold uppercase px-1.5 py-0.2 rounded ${itemTheme.pill}`}>
-                            {res.status}
-                          </span>
+                  return (
+                    <div key={res.rule_id || index} className="py-3.5 space-y-1 group">
+                      <div className="flex items-baseline space-x-2.5">
+                        <span className="font-mono text-sm font-bold text-neutral-900 tracking-tight">
+                          {num}
+                        </span>
+                        <div className="flex-1 flex items-center justify-between">
+                          <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                            {fieldTitle}
+                          </h3>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-[10px] font-mono text-neutral-400">
+                              {Math.round((res.confidence || 0.9) * 100)}%
+                            </span>
+                            <span className={`text-[9px] font-mono font-bold uppercase px-1.5 py-0.2 rounded ${itemTheme.pill}`}>
+                              {res.status}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <p className="text-xs text-neutral-600 pl-6 leading-relaxed">
-                      {messageText}
-                    </p>
-                    {(res.measured_value || res.expected_value) && (
-                      <div className="pl-6 text-[10px] font-mono text-neutral-500 flex items-center space-x-2">
-                        {res.measured_value && <span>Measured: {res.measured_value}</span>}
-                        {res.measured_value && res.expected_value && <span>•</span>}
-                        {res.expected_value && <span>Required: {res.expected_value}</span>}
+                      <p className="text-xs text-neutral-600 pl-6 leading-relaxed">
+                        {messageText}
+                      </p>
+                      {(res.measured_value || res.expected_value) && (
+                        <div className="pl-6 text-[10px] font-mono text-neutral-500 flex items-center space-x-2">
+                          {res.measured_value && <span>Measured: {res.measured_value}</span>}
+                          {res.measured_value && res.expected_value && <span>•</span>}
+                          {res.expected_value && <span>Required: {res.expected_value}</span>}
+                        </div>
+                      )}
+                      <div className="pl-6 text-[10px] font-mono text-neutral-400 flex items-center space-x-2 pt-0.5">
+                        <span>{res.rule_id}</span>
+                        <span>•</span>
+                        <span>{res.rule_version}</span>
                       </div>
-                    )}
-                    <div className="pl-6 text-[10px] font-mono text-neutral-400 flex items-center space-x-2 pt-0.5">
-                      <span>{res.rule_id}</span>
-                      <span>•</span>
-                      <span>{res.rule_version}</span>
-                    </div>
 
-                    {/* Inspector Adjudication Block for Review Required */}
-                    {res.status === "REVIEW_REQUIRED" && (
-                      <div className="pl-6 pt-2">
-                        {adjudicatingRuleId === (res.rule_id || index) ? (
-                          <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-300 space-y-2.5">
-                            <div className="text-[11px] font-bold text-neutral-800 uppercase tracking-wider flex items-center justify-between">
-                              <span>Field Officer Determination</span>
-                              <span className="text-[10px] text-neutral-500 font-mono">{currentUsername || "inspector"}</span>
+                      {/* Inspector Adjudication Block for Review Required */}
+                      {res.status === "REVIEW_REQUIRED" && (
+                        <div className="pl-6 pt-2">
+                          {adjudicatingRuleId === (res.rule_id || index) ? (
+                            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-300 space-y-2.5">
+                              <div className="text-[11px] font-bold text-neutral-800 uppercase tracking-wider flex items-center justify-between">
+                                <span>Field Officer Determination</span>
+                                <span className="text-[10px] text-neutral-500 font-mono">{currentUsername || "inspector"}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setOfficerVerdict("PASS")}
+                                  className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-colors ${
+                                    officerVerdict === "PASS"
+                                      ? "bg-emerald-600 text-white"
+                                      : "bg-white border border-neutral-300 text-neutral-700"
+                                  }`}
+                                >
+                                  ✓ Verify Compliant (PASS)
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setOfficerVerdict("FAIL")}
+                                  className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-colors ${
+                                    officerVerdict === "FAIL"
+                                      ? "bg-rose-600 text-white"
+                                      : "bg-white border border-neutral-300 text-neutral-700"
+                                  }`}
+                                >
+                                  ✕ Flag Violation (FAIL)
+                                </button>
+                              </div>
+                              <input
+                                type="text"
+                                placeholder="Physical caliper measurement or verification note..."
+                                value={officerRemarks}
+                                onChange={(e) => setOfficerRemarks(e.target.value)}
+                                className="w-full px-2.5 py-1.5 text-xs rounded-md bg-white border border-[#D1D5DB] text-neutral-900 focus:outline-none focus:border-black font-sans"
+                              />
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleAdjudicateSubmit(res.rule_id || index)}
+                                  className="px-3 py-1.5 bg-black text-white text-[10px] font-bold uppercase tracking-wider rounded-md hover:bg-neutral-800 shadow-xs"
+                                >
+                                  Submit Official Sign-Off
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setAdjudicatingRuleId(null)}
+                                  className="px-2 py-1 text-[10px] text-neutral-500 hover:text-black"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setOfficerVerdict("PASS")}
-                                className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-colors ${
-                                  officerVerdict === "PASS"
-                                    ? "bg-emerald-600 text-white"
-                                    : "bg-white border border-neutral-300 text-neutral-700"
-                                }`}
-                              >
-                                ✓ Verify Compliant (PASS)
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setOfficerVerdict("FAIL")}
-                                className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-colors ${
-                                  officerVerdict === "FAIL"
-                                    ? "bg-rose-600 text-white"
-                                    : "bg-white border border-neutral-300 text-neutral-700"
-                                }`}
-                              >
-                                ✕ Flag Violation (FAIL)
-                              </button>
-                            </div>
-                            <input
-                              type="text"
-                              placeholder="Physical caliper measurement or verification note..."
-                              value={officerRemarks}
-                              onChange={(e) => setOfficerRemarks(e.target.value)}
-                              className="w-full px-2.5 py-1.5 text-xs rounded-md bg-white border border-[#D1D5DB] text-neutral-900 focus:outline-none focus:border-black font-sans"
-                            />
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleAdjudicateSubmit(res.rule_id || index)}
-                                className="px-3 py-1.5 bg-black text-white text-[10px] font-bold uppercase tracking-wider rounded-md hover:bg-neutral-800 shadow-xs"
-                              >
-                                Submit Official Sign-Off
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setAdjudicatingRuleId(null)}
-                                className="px-2 py-1 text-[10px] text-neutral-500 hover:text-black"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setAdjudicatingRuleId(res.rule_id || index);
-                              setOfficerRemarks("");
-                              setOfficerVerdict("PASS");
-                            }}
-                            className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 hover:bg-amber-200 px-2.5 py-1 rounded-md transition-colors shadow-xs"
-                          >
-                            <span>⚖️</span>
-                            <span>Adjudicate Review Item</span>
-                          </button>
-                        )}
-                      </div>
-                    )}
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAdjudicatingRuleId(res.rule_id || index);
+                                setOfficerRemarks("");
+                                setOfficerVerdict("PASS");
+                              }}
+                              className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 hover:bg-amber-200 px-2.5 py-1 rounded-md transition-colors shadow-xs"
+                            >
+                              <span>⚖️</span>
+                              <span>Adjudicate Review Item</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
 
-                    {/* Adjudicated Verification Badge */}
-                    {res.adjudicated_by && (
-                      <div className="pl-6 pt-1.5">
-                        <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold text-neutral-700 bg-neutral-100 px-2 py-0.5 rounded border border-neutral-200">
-                          <span>✓ Verified by</span>
-                          <span className="text-black">{res.adjudicated_by}</span>
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                      {/* Adjudicated Verification Badge */}
+                      {res.adjudicated_by && (
+                        <div className="pl-6 pt-1.5">
+                          <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold text-neutral-700 bg-neutral-100 px-2 py-0.5 rounded border border-neutral-200">
+                            <span>✓ Verified by</span>
+                            <span className="text-black">{res.adjudicated_by}</span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
 
               {/* PDP Placement Check (Rule 6) */}
-              <div className="py-4 space-y-1">
-                <div className="flex items-baseline space-x-2.5">
-                  <span className="font-mono text-sm font-bold text-neutral-900 tracking-tight">
-                    {(scanResult.compliance_results?.length + 2).toString().padStart(2, "0")}
-                  </span>
-                  <div className="flex-1 flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
-                      PDP Placement Verification
-                    </h3>
-                    <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.2 rounded bg-emerald-600 text-white">
-                      PASS
+              {(filterStatus === "ALL" || filterStatus === "PASS") && (
+                <div className="py-3.5 space-y-1">
+                  <div className="flex items-baseline space-x-2.5">
+                    <span className="font-mono text-sm font-bold text-neutral-900 tracking-tight">
+                      {(scanResult.compliance_results?.length + 2).toString().padStart(2, "0")}
                     </span>
+                    <div className="flex-1 flex items-center justify-between">
+                      <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                        PDP Placement Verification
+                      </h3>
+                      <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.2 rounded bg-emerald-600 text-white">
+                        PASS
+                      </span>
+                    </div>
                   </div>
+                  <p className="text-xs text-neutral-500 pl-6 leading-relaxed">
+                    Rule 6 grouping check verified: all mandatory text coordinates reside inside detected PDP boundary.
+                  </p>
                 </div>
-                <p className="text-xs text-neutral-500 pl-6 leading-relaxed">
-                  Rule 6 grouping check verified: all mandatory text coordinates reside inside detected PDP boundary.
-                </p>
-              </div>
+              )}
             </div>
           </div>
 
-          {/* BOTTOM ACTIONS: Primary Solid Matte-Black Button (Direct from Mockup) */}
-          <div className="space-y-3 pt-4 border-t border-[#E5E7EB]">
+          {/* BOTTOM ACTIONS: Primary Solid Matte-Black Button (Fixed at bottom) */}
+          <div className="space-y-3 pt-4 border-t border-[#E5E7EB] shrink-0 bg-white">
             <a
               href={getReportUrl(scanResult.scan_id, "pdf")}
               target="_blank"

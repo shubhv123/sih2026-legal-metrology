@@ -11,7 +11,7 @@ export default function Upload() {
   const [previewUrl, setPreviewUrl] = useState("/kohaku_bottle.jpg");
   const [productTitle, setProductTitle] = useState("Organic Kohaku Water 500mL (Sample)");
   const [calibrationMethod, setCalibrationMethod] = useState("aruco");
-  const [knownObjectSizeMm, setKnownObjectSizeMm] = useState(25.0);
+  const [knownObjectSizeMm, setKnownObjectSizeMm] = useState(24.0);
   const [productCategory, setProductCategory] = useState("standard_retail");
   const [loading, setLoading] = useState(false);
   const [scanStage, setScanStage] = useState(0);
@@ -138,10 +138,10 @@ export default function Upload() {
 
     const interval = setInterval(() => {
       setScanStage((prev) => (prev < scanStages.length - 1 ? prev + 1 : prev));
-    }, 280);
+    }, 1200);
 
     try {
-      const sizeParam = calibrationMethod === "known_object" ? Number(knownObjectSizeMm) : null;
+      const sizeParam = Number(knownObjectSizeMm) || (calibrationMethod === "aruco" ? 24.0 : 25.0);
       let targetFile = file;
 
       // If user hasn't uploaded a custom photo, fetch default sample as real Blob
@@ -390,22 +390,27 @@ export default function Upload() {
               </button>
             </div>
 
-            {/* Input if Known Object selected */}
-            {calibrationMethod === "known_object" && (
-              <div className="pt-1">
-                <label className="block text-[11px] font-semibold text-neutral-700 mb-1">
-                  Reference Object Real-World Dimension (mm):
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={knownObjectSizeMm}
-                  onChange={(e) => setKnownObjectSizeMm(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg bg-neutral-50 border border-[#D1D5DB] text-neutral-900 focus:outline-none focus:border-black font-mono"
-                  placeholder="e.g. 30.0 for calibration token"
-                />
-              </div>
-            )}
+            {/* Input for Marker or Known Object Size */}
+            <div className="pt-1">
+              <label className="block text-[11px] font-semibold text-neutral-700 mb-1">
+                {calibrationMethod === "aruco"
+                  ? "ArUco Marker Outer Black Square (mm):"
+                  : "Reference Object Dimension (mm):"}
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                value={knownObjectSizeMm}
+                onChange={(e) => setKnownObjectSizeMm(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-lg bg-neutral-50 border border-[#D1D5DB] text-neutral-900 focus:outline-none focus:border-black font-mono"
+                placeholder={calibrationMethod === "aruco" ? "e.g. 24.0 or 30.0" : "e.g. 25.0"}
+              />
+              <span className="text-[10px] text-neutral-400 mt-0.5 block">
+                {calibrationMethod === "aruco"
+                  ? "Default is 24.0 mm for standard cutout test markers"
+                  : "Physical dimension of known coin or reference token"}
+              </span>
+            </div>
           </div>
 
           {/* Error Message */}

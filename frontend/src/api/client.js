@@ -12,7 +12,10 @@ import {
   MOCK_USERS,
 } from "./mockData";
 
-export const BACKEND_URL = "http://localhost:8000";
+export const BACKEND_URL =
+  typeof window !== "undefined" && (window.location.port === "5173" || window.location.port === "3000")
+    ? ""
+    : "http://127.0.0.1:8000";
 const API_BASE = `${BACKEND_URL}/api/v1`;
 
 export function resolveImageUrl(url) {
@@ -25,13 +28,15 @@ export function resolveImageUrl(url) {
   ) {
     return url;
   }
-  return `${BACKEND_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+  const clean = url.startsWith("/") ? url : `/${url}`;
+  return BACKEND_URL ? `${BACKEND_URL}${clean}` : clean;
 }
 
 const client = axios.create({
   baseURL: API_BASE,
-  timeout: 8000,
+  timeout: 120000,
 });
+
 
 // Local in-memory state for mock sessions
 const localMockScans = { ...MOCK_SCANS_DATABASE };
@@ -216,19 +221,19 @@ export async function scanLabel(
     }
 
     const form = new FormData();
-    // Provide both 'file' and 'image' keys for complete endpoint interoperability
-    form.append("file", uploadFile);
+    // Conforms strictly to docs/API_CONTRACT.md
     form.append("image", uploadFile);
     form.append("calibration_method", calibrationMethod || "aruco");
     form.append("product_category", productCategory || "standard_retail");
+    form.append("category", productCategory || "standard_retail");
 
     if (knownObjectSizeMm != null && !isNaN(Number(knownObjectSizeMm))) {
       form.append("known_object_size_mm", Number(knownObjectSizeMm));
+      form.append("known_marker_size_mm", Number(knownObjectSizeMm));
     }
 
-    const res = await client.post("/scan", form, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const res = await client.post("/scan", form);
+
 
     isBackendConnected = true;
     const normalized = normalizeScanResult(res.data);
@@ -250,7 +255,13 @@ export async function scanLabel(
 
     return normalized;
   } catch (err) {
-    console.warn("Backend /scan unavailable or error, falling back gracefully:", err.message);
+    console.error("Backend /scan error:", err);
+    // If user uploaded an actual custom file and backend request failed, surface the real error
+    if (imageFile && imageFile.name !== "kohaku_bottle.jpg" && (imageFile.size > 100 || typeof imageFile !== "string")) {
+      const msg = err.response?.data?.detail || err.message || "Failed to process image scan.";
+      throw new Error(`Scan failed on server: ${msg}`);
+    }
+
     isBackendConnected = false;
 
     // Simulate pipeline latency for realistic UI inspection states

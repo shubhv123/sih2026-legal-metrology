@@ -14,7 +14,8 @@ class RoleEnum(str, Enum):
 
 class CalibrationMethod(str, Enum):
     ARUCO = "aruco"
-    REFERENCE_OBJECT = "reference_object"
+    KNOWN_OBJECT = "known_object"
+    REFERENCE_OBJECT = "reference_object"  # alias for backward compatibility
     NONE = "none"
 
 

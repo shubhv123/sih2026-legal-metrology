@@ -37,3 +37,6 @@ ml/weights/*.pt
 !ml/weights/.gitkeep
 backend/app/data/models/*.pt
 !backend/app/data/models/.gitkeep
+
+# Agent rules and IDE customizations
+.agents/

@@ -325,11 +325,14 @@ async def scan_label(
             and f.bbox.y_min >= py1 - 35
             and f.bbox.y_max <= py2 + 35
         )
+        # Placement confidence accounts for both panel detection confidence and field OCR confidence
+        field_conf = float(f.confidence) if f.confidence is not None else 0.85
+        pc_conf = round(float(0.5 * det_conf + 0.5 * field_conf), 4) if within_pdp else round(float(det_conf), 4)
         placement_checks.append(
             PlacementCheck(
                 field_name=f.field_name,
                 within_pdp=bool(within_pdp),
-                confidence=round(float(det_conf), 4),
+                confidence=pc_conf,
             )
         )
 

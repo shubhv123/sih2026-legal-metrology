@@ -32,7 +32,7 @@ def create_access_token(username: str, role: str, expires_in_seconds: int = 8640
         "exp": int(time.time()) + expires_in_seconds,
     }
     payload_bytes = json.dumps(payload).encode()
-    b64_payload = base64.urlsafe_b64encode(payload_bytes).decode()
+    b64_payload = base64.b64encode(payload_bytes, altchars=b'-_').decode().rstrip('=')
     signature = hashlib.sha256(f"{SALT}_{b64_payload}".encode()).hexdigest()[:16]
     return f"{b64_payload}.{signature}"
 
@@ -47,7 +47,8 @@ def decode_access_token(token: str) -> dict | None:
         expected_sig = hashlib.sha256(f"{SALT}_{b64_payload}".encode()).hexdigest()[:16]
         if signature != expected_sig:
             return None
-        payload_bytes = base64.urlsafe_b64decode(b64_payload.encode())
+        padding = '=' * (-len(b64_payload) % 4)
+        payload_bytes = base64.b64decode(b64_payload + padding, altchars=b'-_')
         payload = json.loads(payload_bytes.decode())
         if payload.get("exp", 0) < time.time():
             return None  # expired

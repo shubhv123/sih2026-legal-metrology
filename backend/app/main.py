@@ -11,9 +11,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.db.seed import seed_database
-from app.db.session import init_db
-from app.routers import auth, dashboard, history, reports, scan, search
+from .db.seed import seed_database
+from .db.session import init_db
+from .routers import auth, dashboard, history, reports, scan, search
 
 STATIC_DIR = Path(__file__).resolve().parent / "data" / "static"
 

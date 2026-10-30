@@ -40,3 +40,8 @@ backend/app/data/models/*.pt
 
 # Agent rules and IDE customizations
 .agents/
+# DriftZero Caches & Runtime Artifacts
+*.py[cod]
+*$py.class
+.pytest_cache/
+golden.json

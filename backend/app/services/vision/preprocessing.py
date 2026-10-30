@@ -17,6 +17,7 @@ Important Design & Usage Notes:
 from typing import Tuple, Dict
 import cv2
 import numpy as np
+from numpy import frombuffer
 
 
 def decode_image(image_bytes: bytes) -> np.ndarray:
@@ -32,7 +33,7 @@ def decode_image(image_bytes: bytes) -> np.ndarray:
     if not image_bytes:
         raise ValueError("Cannot decode empty image bytes.")
 
-    np_buffer = np.frombuffer(image_bytes, dtype=np.uint8)
+    np_buffer = frombuffer(image_bytes, dtype=np.uint8, count=-1, offset=0)
     # cv2.IMREAD_COLOR auto-rotates according to EXIF orientation metadata
     decoded = cv2.imdecode(np_buffer, cv2.IMREAD_COLOR)
 

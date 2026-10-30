@@ -1,19 +1,19 @@
-from app.schemas.auth import LoginRequest, TokenResponse, UserResponse
-from app.schemas.compliance import ComplianceResultSchema, ExtractedField
-from app.schemas.dashboard import (
+from .auth import LoginRequest, TokenResponse, UserResponse
+from .compliance import ComplianceResultSchema, ExtractedField
+from .dashboard import (
     CommonViolationItem,
     DashboardStatsResponse,
     RecentActivityItem,
 )
-from app.schemas.enums import (
+from .enums import (
     CalibrationMethod,
     ComplianceStatus,
     ProductCategory,
     RoleEnum,
 )
-from app.schemas.history import PaginatedScansResponse
-from app.schemas.product import ProductBase, ProductCreate, ProductResponse
-from app.schemas.scan import ScanResponse, ScanSummaryItem
+from .history import PaginatedScansResponse
+from .product import ProductBase, ProductCreate, ProductResponse
+from .scan import ScanResponse, ScanSummaryItem
 
 __all__ = [
     "ComplianceStatus",

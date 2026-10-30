@@ -11,6 +11,7 @@ to REVIEW_REQUIRED.
 from pathlib import Path
 from typing import Optional, List, Tuple
 import numpy as np
+from numpy import count_nonzero
 import cv2
 
 from app.schemas.scan import Detection, DetectionMethod, BoundingBox
@@ -143,7 +144,7 @@ def opencv_fallback_detect(image: np.ndarray) -> Detection:
 
             # Text edge density inside this candidate bounding box
             crop_text = text_mask[y : y + ch, x : x + cw]
-            text_density = np.count_nonzero(crop_text) / float(bbox_area)
+            text_density = count_nonzero(crop_text) / float(bbox_area)
 
             # Combined score: prioritize high text density and good rectangular extent
             score = (text_density * 4.0) + (extent * 1.5)
@@ -179,5 +180,3 @@ def opencv_fallback_detect(image: np.ndarray) -> Detection:
             y_max=max(margin_y + 1, h - margin_y),
         ),
     )
-
-

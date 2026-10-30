@@ -15,7 +15,7 @@ python-jose[cryptography]==3.3.0
 opencv-python==4.10.0.84
 easyocr==1.7.2
 rapidfuzz==3.9.7
-numpy==1.26.4
+numpy==2.5.4
 # ultralytics only needed once YOLO training starts - installed separately
 # in the Colab notebook; add here once weights are integrated locally:
 # ultralytics==8.3.0

@@ -5,6 +5,7 @@ Owner: SHUBH
 
 import numpy as np
 import pytest
+from numpy import array
 
 from app.schemas.scan import DetectionMethod
 from app.services.vision.detection import (
@@ -38,7 +39,7 @@ def test_opencv_fallback_detect_solid_rectangle():
 
 def test_opencv_fallback_detect_empty_or_bad_image():
     """Verify opencv_fallback_detect never raises on degenerate/empty inputs."""
-    empty_img = np.array([], dtype=np.uint8)
+    empty_img = array([], dtype=np.uint8, copy=True)
     det1 = opencv_fallback_detect(empty_img)
     assert det1.method == DetectionMethod.OPENCV_FALLBACK
     assert det1.confidence <= 0.50

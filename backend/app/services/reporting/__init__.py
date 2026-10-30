@@ -8,7 +8,7 @@ Generates:
 
 from typing import Any
 
-from app.schemas.scan import ScanResponse
+from backend.app.schemas.scan import ScanResponse
 from app.services.reporting.docx_report import generate_docx_report
 from app.services.reporting.pdf_report import generate_pdf_report
 

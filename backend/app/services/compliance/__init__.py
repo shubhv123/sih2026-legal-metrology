@@ -1,6 +1,6 @@
 """Compliance and Rule Engine service (Owner: Aditya)."""
 
-from app.services.compliance.rule_engine import (
+from .rule_engine import (
     evaluate_compliance,
     get_rule_version,
     load_lmpc_rules,
